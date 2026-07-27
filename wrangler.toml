@@ -1,0 +1,52 @@
+name = "lora-worker"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+workers_dev = false
+
+[triggers]
+crons = ["0 */6 * * *"]
+
+# Cloudflare Access guards the browser-facing admin page at /admin (and the
+# /admin/api/* calls it makes) — see src/middleware/access.ts. Neither value here
+# is a secret: AUD is the Access application's public audience tag, and the team
+# domain is the public Zero Trust login host. The Worker verifies the Access JWT
+# itself rather than trusting the edge to have blocked the request.
+#
+# ADMIN_EMAILS is deliberately NOT here. It is the operator allow-list checked in
+# access.ts and, while it grants nothing without a matching Cloudflare Access
+# account, this file is public — so it is set as a secret instead:
+#
+#   npx wrangler secret put ADMIN_EMAILS      # comma-separated, no spaces needed
+#
+# The Worker reads c.env.ADMIN_EMAILS identically whether it comes from a var or
+# a secret, so nothing in the code changes. Leaving it unset is also valid: the
+# Access application's own policy is then the only gate (see access.ts).
+[vars]
+ACCESS_AUD = "a416f57695a708e11eed20e991aedda5c19dfd9b988bc18f4c43d2b97cd64893"
+ACCESS_TEAM_DOMAIN = "thebeacons.cloudflareaccess.com"
+
+# Storage runs on SQLite-backed Durable Objects (free tier: 100k writes/day vs
+# KV's 1k). Consolidated 2026-07-22: every logical namespace now shares ONE
+# KvStore instance (keys prefixed per namespace), so a poll/bundle/raid can read
+# or write across them in a single RPC and raids resolve atomically. The adapter
+# preserves the KV interface so routes/queries are unchanged. Class/migration are
+# unchanged by the consolidation. See src/kv/do_store.ts and
+# docs/do-consolidation-2026-07.md.
+[[durable_objects.bindings]]
+name = "KV_DO"
+class_name = "KvStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["KvStore"]
+
+# KV namespaces were migrated to the KvStore Durable Object (2026-07-11) and
+# unbound. The namespaces still exist with the pre-migration snapshot — to roll
+# back, re-add these bindings and re-run POST /api/admin/backfill:
+#   LEDGER  = 90804b62243d4e92b54f0df7fb6bdc69
+#   PLAYERS = 7c3a78041de44bdaa5e2605470ea3ed2
+#   ATTACKS = 8847f591335c4c189edda47ffacc2fcf
+#   DEFENSE = ee0e8b7165c0442e9ee1f2ac7713ade2
+#   SCOUTS  = 611307cf60264b8ba7e2292419426864
+#   META    = f1a92e1917e94e088cffdd1aa0dc121f
+# (VOTES = 49fdced8c56d47b08d5c802429470233 — federation removed 2026-07-22; namespace retained but unused.)

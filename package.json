@@ -1,0 +1,23 @@
+{
+  "name": "lora-worker",
+  "version": "0.1.0",
+  "description": "LoRa the Explorer multiplayer Worker — public ledger, combat resolution, anti-cheat",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.12.28"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.18.1",
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.107.1"
+  }
+}
