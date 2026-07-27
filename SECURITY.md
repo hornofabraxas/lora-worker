@@ -46,12 +46,10 @@ The things most worth your attention:
 
 Stated openly so nobody wastes time reporting them as novel:
 
-- **The per-player shared secret is stored in the Durable Object as-is** (the `secret_hash` field is
-  a shared HMAC key, despite the name — it cannot be a one-way hash, because the server must
-  recompute the signature). Anyone with read access to the storage backend can impersonate any
-  player. Access to that storage is the security boundary.
-- **Deleting a player leaves historical raid and scout records in place.** Those can reference the
-  pseudonymous player ID and the display name at the time. Full erasure is currently a manual step.
+- **The per-player shared `secret` is stored in the Durable Object as issued.** It cannot be a
+  one-way hash, because the Worker has to recompute each request signature from it. Anyone with
+  read access to the storage backend can therefore impersonate any player — that storage boundary
+  is the thing being protected, and it is why `ADMIN_SECRET` and the Cloudflare account matter.
 
 ## If you run your own instance
 

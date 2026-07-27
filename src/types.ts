@@ -33,7 +33,13 @@ export interface PlayerProfile {
   registered_at: number;
   items: ItemRecord[];
   post_summaries: PostSummary[];
-  secret_hash: string;
+  /**
+   * The player's shared HMAC key, stored as issued. It cannot be a one-way hash:
+   * the Worker has to recompute the request signature from it (middleware/auth).
+   * Read access to this storage therefore means the ability to impersonate any
+   * player — that boundary, not this field, is the thing to protect.
+   */
+  secret: string;
   /** Coarse cell centroid (lat/lng) for travel-time distance. Sent by the game server. */
   coarse_centroid?: { lat: number; lng: number };
   /** Unix seconds the centroid was last moved. Guards against teleport-before-raid. */

@@ -42,7 +42,7 @@ app.post("/api/register", async (c) => {
     registered_at: Math.floor(Date.now() / 1000),
     items: [],
     post_summaries: [],
-    secret_hash: secret,
+    secret,
   };
 
   await putPlayer(c.env, player);
@@ -51,7 +51,7 @@ app.post("/api/register", async (c) => {
   return c.json({
     ok: true,
     player_id: playerId,
-    secret: secret,
+    secret,
   }, 201);
 });
 

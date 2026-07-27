@@ -119,10 +119,15 @@ Moderation ladder, in increasing severity: **censor a name** (applied at read ti
 the next bundle sync) → **freeze the account** (reversible; authenticates but cannot write) →
 **delete the player**.
 
-Deleting a player removes their profile, per-post defence, last-bundle marker, and leaderboard index
-entry. It does **not** purge historical raid and scout records, which can still reference the
-pseudonymous player ID and the display name held at the time — purge those manually if a player
-asks for full erasure.
+Deleting a player is a **complete erasure** (`purgePlayerData` in `src/kv/queries.ts`), because it
+is the endpoint behind a "delete my account" request. It removes every row keyed by that player —
+profile, defence, raze tombstones, raid records, cooldowns, notifications, audit counters,
+rate-limit rows, leaderboard index entry — and then scrubs their identifiers out of records that
+belong to players who remain: raids are **anonymised** (the survivor keeps a coherent history, the
+departed player's id and name are replaced), and scout reports naming either side are deleted.
+
+It costs a few full scans, deliberately. Nothing on a gameplay hot path calls it, and the
+guarantee matters more than the milliseconds. `test/erasure.test.ts` locks the behaviour down.
 
 ## Security
 

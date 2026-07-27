@@ -270,3 +270,121 @@ export async function getRaidCooldowns(env: Env, attackerId: string): Promise<Re
   return out;
 }
 
+
+// ---------------------------------------------------------------------------
+// Erasure
+// ---------------------------------------------------------------------------
+
+/**
+ * Values substituted for a deleted player wherever they appear inside *another*
+ * player's surviving record. The counterparty keeps a coherent history ("someone
+ * raided me, and here's the damage") while every identifier belonging to the
+ * departed player is gone.
+ */
+export const ERASED_PLAYER_ID = "erased";
+export const ERASED_PLAYER_NAME = "A departed explorer";
+
+export interface PurgeCounts {
+  keysDeleted: number;
+  raidsAnonymised: number;
+  scoutsDeleted: number;
+}
+
+/**
+ * Erase every trace of a player: the rows keyed by their id, and the references
+ * to them embedded in records belonging to players who remain.
+ *
+ * Deleting the profile alone used to leave raid and scout history behind, which
+ * meant "delete my account" was only partly true. This makes it true.
+ *
+ * Two passes:
+ *  1. Prefix/exact deletes for everything keyed by the player's own id.
+ *  2. Scans of the raid, attacker-last-raid and scout spaces for records stored
+ *     under *another* player's key that name this one. Raids are anonymised
+ *     rather than deleted — the surviving counterparty's own history is theirs
+ *     to keep — while scout reports are deleted outright, since a recon snapshot
+ *     of (or by) a player who no longer exists has no counterparty value.
+ *
+ * Admin-triggered and rare, so full scans are acceptable here; nothing on a
+ * gameplay hot path calls this.
+ */
+export async function purgePlayerData(env: Env, playerId: string): Promise<PurgeCounts> {
+  let keysDeleted = 0;
+  const del = async (ns: KVNamespace, key: string) => {
+    await ns.delete(key);
+    keysDeleted++;
+  };
+  const delPrefix = async (ns: KVNamespace, prefix: string) => {
+    const listed = await ns.list({ prefix });
+    for (const k of listed.keys) await del(ns, k.name);
+  };
+
+  // --- Pass 1: everything keyed by this player ------------------------------
+  await del(env.PLAYERS, playerKey(playerId));
+  await del(env.PLAYERS, playerLastBundleKey(playerId));
+  await del(env.META, auditRejectKey(playerId)); // audit counters live in META
+
+  // Prefix rather than a walk of post_summaries: a razed or since-removed post
+  // can leave defense/tombstone rows the profile no longer lists.
+  await delPrefix(env.DEFENSE, `defense:${playerId}:`);
+  await delPrefix(env.DEFENSE, razeTombstonePrefix(playerId));
+
+  await delPrefix(env.ATTACKS, `raid:${playerId}:`);   // raids against them
+  await del(env.ATTACKS, `araid:${playerId}`);          // active-raid lock
+  await del(env.ATTACKS, `araidlast:${playerId}`);      // their last raid
+  await delPrefix(env.ATTACKS, `raidcd:${playerId}:`);  // their cooldowns
+
+  await del(env.SCOUTS, notificationsKey(playerId));
+  await delPrefix(env.META, `ratelimit:${playerId}:`);
+
+  await removeFromPlayerIndex(env, playerId);
+
+  // --- Pass 2: references held in other players' records --------------------
+  let raidsAnonymised = 0;
+  const anonymise = async (ns: KVNamespace, prefix: string) => {
+    const rows = await batch(ns).listValues(prefix);
+    for (const row of rows) {
+      let raid: RaidRecord;
+      try {
+        raid = JSON.parse(row.value) as RaidRecord;
+      } catch {
+        continue;
+      }
+      let touched = false;
+      if (raid.attacker_id === playerId) {
+        raid.attacker_id = ERASED_PLAYER_ID;
+        raid.attacker_name = ERASED_PLAYER_NAME;
+        touched = true;
+      }
+      if (raid.target_player_id === playerId) {
+        raid.target_player_id = ERASED_PLAYER_ID;
+        raid.target_player_name = ERASED_PLAYER_NAME;
+        touched = true;
+      }
+      if (touched) {
+        await ns.put(row.name, JSON.stringify(raid));
+        raidsAnonymised++;
+      }
+    }
+  };
+  // Raids filed under the *target's* id (this player as attacker), and the
+  // attacker-side copy held by whoever raided this player.
+  await anonymise(env.ATTACKS, "raid:");
+  await anonymise(env.ATTACKS, "araidlast:");
+
+  let scoutsDeleted = 0;
+  for (const row of await batch(env.SCOUTS).listValues("scout:")) {
+    let scout: { scouter?: string; target_player?: string };
+    try {
+      scout = JSON.parse(row.value);
+    } catch {
+      continue;
+    }
+    if (scout.scouter === playerId || scout.target_player === playerId) {
+      await env.SCOUTS.delete(row.name);
+      scoutsDeleted++;
+    }
+  }
+
+  return { keysDeleted, raidsAnonymised, scoutsDeleted };
+}

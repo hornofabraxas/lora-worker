@@ -74,7 +74,7 @@ export async function verifyPlayerSignature(
   }
 
   const body = await c.req.text();
-  const expected = await computeHmac(player.secret_hash, playerId + timestamp + body);
+  const expected = await computeHmac(player.secret, playerId + timestamp + body);
   if (!timingSafeEqual(expected, signature)) {
     await bumpAuditReject(c.env, playerId);
     return c.json({ ok: false, error: "Invalid signature" }, 401);

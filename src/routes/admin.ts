@@ -2,13 +2,12 @@ import { Hono } from "hono";
 import type { Env, PlayerProfile, PostSummary, DefenseValues, ItemRecord } from "../types.js";
 import { POST_MAX_HP } from "../types.js";
 import {
-  getPlayer, putPlayer, addToPlayerIndex, removeFromPlayerIndex,
+  getPlayer, putPlayer, addToPlayerIndex, purgePlayerData,
   getDefense, putDefense, getAuditReject,
   playersFromRows, auditRejectsFromRows, PLAYER_SCAN_LIMIT,
 } from "../kv/queries.js";
 import {
-  defenseKey, playerLastBundleKey, playerKey,
-  PLAYER_PREFIX, AUDIT_REJECT_PREFIX, NS,
+  playerKey, PLAYER_PREFIX, AUDIT_REJECT_PREFIX, NS,
 } from "../kv/schema.js";
 import { snapshotRead } from "../kv/composite.js";
 import { timingSafeEqual } from "../middleware/auth.js";
@@ -99,7 +98,7 @@ core.post("/seed-player", async (c) => {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const secret = existing?.secret_hash ?? randomHex(32);
+  const secret = existing?.secret ?? randomHex(32);
 
   const postInputs = body.posts ?? [];
   const post_summaries: PostSummary[] = postInputs.map((p) => ({
@@ -116,7 +115,7 @@ core.post("/seed-player", async (c) => {
     registered_at: body.registered_at ?? existing?.registered_at ?? now,
     items: body.items ?? existing?.items ?? [],
     post_summaries,
-    secret_hash: secret,
+    secret,
     ...(body.coarse_centroid ? { coarse_centroid: body.coarse_centroid } : {}),
     ...(typeof body.active_title === "string"
       ? { active_title: body.active_title.slice(0, 40) }
@@ -247,21 +246,21 @@ core.get("/player/:id", async (c) => {
   return c.json({ ok: true, player, defenses });
 });
 
-// Remove a player entirely: profile, per-post defense, last-bundle marker, and
-// leaderboard index entry. (Ledger/raid history is left to age out on its own.)
+// Erase a player completely — profile, defense, tombstones, raid records,
+// cooldowns, notifications, audit counters, rate-limit rows and index entry —
+// and scrub their identifiers out of records that belong to players who remain
+// (raids anonymised, scout reports deleted). See purgePlayerData.
+//
+// This is the endpoint behind a "delete my account" request, so it has to leave
+// nothing behind; it deliberately costs a few full scans rather than being fast.
 core.delete("/player/:id", async (c) => {
   const id = c.req.param("id");
   const player = await getPlayer(c.env, id);
   if (!player) return c.json({ ok: false, error: "Player not found" }, 404);
 
-  for (const p of player.post_summaries) {
-    await c.env.DEFENSE.delete(defenseKey(id, p.post_token));
-  }
-  await c.env.PLAYERS.delete(`player:${id}`);
-  await c.env.PLAYERS.delete(playerLastBundleKey(id));
-  await removeFromPlayerIndex(c.env, id);
+  const counts = await purgePlayerData(c.env, id);
 
-  return c.json({ ok: true, removed: id });
+  return c.json({ ok: true, removed: id, ...counts });
 });
 
 // Trim a player's UNUSED, UNINSTALLED items of given types down to a target
