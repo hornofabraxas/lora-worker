@@ -59,7 +59,7 @@ async function seedRoster(count: number, opts: { flagged?: boolean } = {}): Prom
       registered_at: now,
       coarse_cells: ["8329a0fffffffff"],
       items: [],
-      post_summaries: [{ post_token: hex, level: 5, chartered_at: now, coarse_cell: "", name: `Post${i}` }],
+      post_summaries: [{ post_token: hex, level: 5, chartered_at: now, name: `Post${i}` }],
       secret: "x".repeat(64),
       post_first_seen: { [hex]: now },
       post_first_level: { [hex]: opts.flagged ? 1 : 5 },

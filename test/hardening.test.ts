@@ -93,7 +93,7 @@ describe("bundle write-time invariants", () => {
     const { player_id, secret } = await registerPlayer();
     const backdated = NOW() - 86400 * 100; // claim 100 days old
     const res = await pushBundle(player_id, secret, {
-      post_summaries: [{ post_token: "88aa01fffffffff", level: 2, chartered_at: backdated, coarse_cell: "" }],
+      post_summaries: [{ post_token: "88aa01fffffffff", level: 2, chartered_at: backdated }],
     });
     expect(res.status).toBe(200);
     const player = await inspect(player_id);
@@ -108,7 +108,6 @@ describe("bundle write-time invariants", () => {
       post_token: `88aa0${i}fffffffff`,
       level: 1,
       chartered_at: NOW() - i,
-      coarse_cell: "",
     }));
     expect((await pushBundle(player_id, secret, { post_summaries: posts })).status).toBe(200);
     const player = await inspect(player_id);
@@ -119,7 +118,7 @@ describe("bundle write-time invariants", () => {
     const { player_id, secret } = await registerPlayer();
     const farFuture = NOW() + 86400 * 100;
     await pushBundle(player_id, secret, {
-      post_summaries: [{ post_token: "88aa02fffffffff", level: 1, chartered_at: NOW(), coarse_cell: "", dormant_until: farFuture }],
+      post_summaries: [{ post_token: "88aa02fffffffff", level: 1, chartered_at: NOW(), dormant_until: farFuture }],
     });
     const player = await inspect(player_id);
     const post = player.post_summaries.find((p: any) => p.post_token === "88aa02fffffffff");

@@ -72,7 +72,6 @@ export interface PostSummary {
   post_token: string;
   level: number;
   chartered_at: number;
-  coarse_cell: string;
   // Player's custom (or auto-generated) name for this outpost. Echoed on the
   // leaderboard, scout reports, and raid notifications so rivals see the post's
   // chosen identity rather than a bare hex label. Absent on legacy bundles.

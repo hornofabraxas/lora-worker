@@ -49,7 +49,6 @@ async function addPostSummary(playerId: string, postToken: string, level: number
     post_token: postToken,
     level,
     chartered_at: Math.floor(Date.now() / 1000) - 86400 * 10,
-    coarse_cell: "831a00fffffffff",
   });
   await env.PLAYERS.put(`player:${playerId}`, JSON.stringify(raw));
 }

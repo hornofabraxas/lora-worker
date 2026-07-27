@@ -289,7 +289,7 @@ describe("POST /api/bundle", () => {
       field_notes_earned: 0,
       post_surveys: [],
       coarse_cells: [],
-      post_summaries: [{ post_token: "hex_admin", level: 1, chartered_at: Math.floor(Date.now() / 1000), coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_admin", level: 1, chartered_at: Math.floor(Date.now() / 1000) }],
       active_title: "Steadfast",
       timestamp: Math.floor(Date.now() / 1000),
     });
@@ -361,7 +361,6 @@ describe("POST /api/bundle", () => {
     raw.post_summaries = [{
       post_token: "hex_a", level: 3,
       chartered_at: Math.floor(Date.now() / 1000) - 86400,
-      coarse_cell: "831a00fffffffff",
     }];
     await env.PLAYERS.put(`player:${player_id}`, JSON.stringify(raw));
 
@@ -372,7 +371,7 @@ describe("POST /api/bundle", () => {
       xp_earned: 0,
       field_notes_earned: 0,
       post_surveys: [],
-      post_summaries: [{ post_token: "hex_a", level: 2, chartered_at: Math.floor(Date.now() / 1000) - 86400, coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_a", level: 2, chartered_at: Math.floor(Date.now() / 1000) - 86400 }],
       coarse_cells: [],
       timestamp: Math.floor(Date.now() / 1000),
     });
@@ -406,7 +405,7 @@ describe("POST /api/bundle", () => {
     const body1 = JSON.stringify({
       survey_count: 0, discoveries: 0, provisions_earned: 0, xp_earned: 0,
       field_notes_earned: 0, post_surveys: [], coarse_cells: [],
-      post_summaries: [{ post_token: "hex_razed", level: 2, chartered_at: 1, coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_razed", level: 2, chartered_at: 1 }],
       timestamp: Math.floor(Date.now() / 1000),
     });
     const res1 = await app.fetch(new Request("http://localhost/api/bundle", {
@@ -433,7 +432,7 @@ describe("POST /api/bundle", () => {
     const body3 = JSON.stringify({
       survey_count: 0, discoveries: 0, provisions_earned: 0, xp_earned: 0,
       field_notes_earned: 0, post_surveys: [], coarse_cells: [],
-      post_summaries: [{ post_token: "hex_razed", level: 1, chartered_at: Math.floor(Date.now() / 1000), coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_razed", level: 1, chartered_at: Math.floor(Date.now() / 1000) }],
       timestamp: Math.floor(Date.now() / 1000) + 2,
     });
     const res3 = await app.fetch(new Request("http://localhost/api/bundle", {
@@ -452,7 +451,6 @@ describe("POST /api/bundle", () => {
     raw.post_summaries = [{
       post_token: "hex_a", level: 1,
       chartered_at: Math.floor(Date.now() / 1000) - 86400,
-      coarse_cell: "831a00fffffffff",
     }];
     await env.PLAYERS.put(`player:${player_id}`, JSON.stringify(raw));
 
@@ -463,7 +461,7 @@ describe("POST /api/bundle", () => {
       xp_earned: 0,
       field_notes_earned: 0,
       post_surveys: [],
-      post_summaries: [{ post_token: "hex_a", level: 3, chartered_at: Math.floor(Date.now() / 1000) - 86400, coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_a", level: 3, chartered_at: Math.floor(Date.now() / 1000) - 86400 }],
       coarse_cells: [],
       timestamp: Math.floor(Date.now() / 1000),
     });
@@ -488,7 +486,6 @@ describe("POST /api/bundle", () => {
     raw.post_summaries = [{
       post_token: "hex_b", level: 2,
       chartered_at: Math.floor(Date.now() / 1000) - 86400,
-      coarse_cell: "831a00fffffffff",
     }];
     await env.PLAYERS.put(`player:${player_id}`, JSON.stringify(raw));
 
@@ -499,7 +496,7 @@ describe("POST /api/bundle", () => {
       xp_earned: 0,
       field_notes_earned: 0,
       post_surveys: [],
-      post_summaries: [{ post_token: "hex_b", level: 3, chartered_at: Math.floor(Date.now() / 1000) - 86400, coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_b", level: 3, chartered_at: Math.floor(Date.now() / 1000) - 86400 }],
       coarse_cells: [],
       timestamp: Math.floor(Date.now() / 1000),
     });

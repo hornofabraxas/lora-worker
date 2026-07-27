@@ -105,7 +105,6 @@ core.post("/seed-player", async (c) => {
     post_token: p.post_token,
     level: p.level,
     chartered_at: p.chartered_at ?? now - 86400 * 20,
-    coarse_cell: "",
     ...(p.dormant_until ? { dormant_until: p.dormant_until } : {}),
   }));
 

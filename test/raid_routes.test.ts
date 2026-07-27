@@ -26,7 +26,7 @@ async function auth(playerId: string, secret: string, body: string): Promise<Rec
 
 async function addPost(playerId: string, postToken: string, level: number): Promise<void> {
   const raw = (await env.PLAYERS.get(`player:${playerId}`, "json")) as any;
-  raw.post_summaries.push({ post_token: postToken, level, chartered_at: Math.floor(Date.now() / 1000) - 864000, coarse_cell: "831a00fffffffff" });
+  raw.post_summaries.push({ post_token: postToken, level, chartered_at: Math.floor(Date.now() / 1000) - 864000 });
   await env.PLAYERS.put(`player:${playerId}`, JSON.stringify(raw));
 }
 
