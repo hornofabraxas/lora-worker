@@ -52,9 +52,8 @@ Stated openly so nobody wastes time reporting them as novel:
   player. Access to that storage is the security boundary.
 - **Deleting a player leaves historical raid and scout records in place.** Those can reference the
   pseudonymous player ID and the display name at the time. Full erasure is currently a manual step.
-- **Some posts predating 2026-07-23 use the real H3 hex as their token** on installs registered
-  before opaque tokens existed. That historical exposure is documented in the privacy notice; new
-  posts are always random tokens.
+- **`post_hex` is a historical field name, not a hex.** It carries the opaque per-post token. No
+  code path puts a real H3 id on the wire.
 
 ## If you run your own instance
 

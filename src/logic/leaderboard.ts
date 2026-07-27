@@ -14,8 +14,8 @@ export const LEADERBOARD_STALE_SECONDS = 6 * 3600;
 
 // One precomputed row per player. Names are stored raw and moderated at read
 // time (so an operator censor takes effect immediately without a rebuild).
-// post_hex values are opaque per-post tokens minted by the game server (real H3
-// ids only on legacy posts) — they identify a raid/scout target, not a place.
+// post_hex values are opaque per-post tokens minted by the game server — they
+// identify a raid/scout target, not a place.
 export interface LeaderboardEntry {
   player_id: string;
   display_name: string;
