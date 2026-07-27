@@ -43,10 +43,10 @@ async function giveProbe(playerId: string): Promise<string> {
   return probeId;
 }
 
-async function addPostSummary(playerId: string, postHex: string, level: number): Promise<void> {
+async function addPostSummary(playerId: string, postToken: string, level: number): Promise<void> {
   const raw = await env.PLAYERS.get(`player:${playerId}`, "json") as any;
   raw.post_summaries.push({
-    post_hex: postHex,
+    post_token: postToken,
     level,
     chartered_at: Math.floor(Date.now() / 1000) - 86400 * 10,
     coarse_cell: "831a00fffffffff",

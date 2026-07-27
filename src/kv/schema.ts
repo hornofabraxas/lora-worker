@@ -47,15 +47,15 @@ export function rateLimitKey(
   return `ratelimit:${playerId}:bundles:${hour}`;
 }
 
-export function defenseKey(playerId: string, postHex: string): string {
-  return `defense:${playerId}:${postHex}`;
+export function defenseKey(playerId: string, postToken: string): string {
+  return `defense:${playerId}:${postToken}`;
 }
 
 // A razed post leaves a tombstone so a lagging game server can't resurrect it by
 // re-sending it in a bundle before it reconciles the raze locally. Stored in the
 // DEFENSE namespace under a distinct `razed:` prefix (regen scans `defense:`).
-export function razeTombstoneKey(playerId: string, postHex: string): string {
-  return `razed:${playerId}:${postHex}`;
+export function razeTombstoneKey(playerId: string, postToken: string): string {
+  return `razed:${playerId}:${postToken}`;
 }
 
 export function razeTombstonePrefix(playerId: string): string {

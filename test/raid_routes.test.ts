@@ -24,15 +24,15 @@ async function auth(playerId: string, secret: string, body: string): Promise<Rec
   return { "X-Player-ID": playerId, "X-Timestamp": timestamp, "X-Signature": signature, "Content-Type": "application/json" };
 }
 
-async function addPost(playerId: string, postHex: string, level: number): Promise<void> {
+async function addPost(playerId: string, postToken: string, level: number): Promise<void> {
   const raw = (await env.PLAYERS.get(`player:${playerId}`, "json")) as any;
-  raw.post_summaries.push({ post_hex: postHex, level, chartered_at: Math.floor(Date.now() / 1000) - 864000, coarse_cell: "831a00fffffffff" });
+  raw.post_summaries.push({ post_token: postToken, level, chartered_at: Math.floor(Date.now() / 1000) - 864000, coarse_cell: "831a00fffffffff" });
   await env.PLAYERS.put(`player:${playerId}`, JSON.stringify(raw));
 }
 
-async function wardPost(playerId: string, postHex: string, dormantUntil: number): Promise<void> {
+async function wardPost(playerId: string, postToken: string, dormantUntil: number): Promise<void> {
   const raw = (await env.PLAYERS.get(`player:${playerId}`, "json")) as any;
-  const p = raw.post_summaries.find((s: any) => s.post_hex === postHex);
+  const p = raw.post_summaries.find((s: any) => s.post_token === postToken);
   p.dormant_until = dormantUntil;
   await env.PLAYERS.put(`player:${playerId}`, JSON.stringify(raw));
 }
@@ -80,7 +80,7 @@ describe("POST /api/raid/dispatch", () => {
     const i2 = await giveItem(atk.player_id, "attack_common");
 
     const res = await post("/api/raid/dispatch", atk.player_id, atk.secret, {
-      target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [i1, i2],
+      target_player_id: def.player_id, target_post_token: "post_a", item_ids: [i1, i2],
     });
     const json = (await res.json()) as any;
     expect(res.status).toBe(200);
@@ -102,7 +102,7 @@ describe("POST /api/raid/dispatch", () => {
     const i1 = await giveItem(atk.player_id, "attack_common");
 
     const res = await post("/api/raid/dispatch", atk.player_id, atk.secret, {
-      target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [i1],
+      target_player_id: def.player_id, target_post_token: "post_a", item_ids: [i1],
     });
     const json = (await res.json()) as any;
     expect(res.status).toBe(400);
@@ -123,7 +123,7 @@ describe("POST /api/raid/dispatch", () => {
     const i1 = await giveItem(atk.player_id, "attack_common");
 
     const res = await post("/api/raid/dispatch", atk.player_id, atk.secret, {
-      target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [i1],
+      target_player_id: def.player_id, target_post_token: "post_a", item_ids: [i1],
     });
     const json = (await res.json()) as any;
     expect(res.status).toBe(200);
@@ -139,7 +139,7 @@ describe("POST /api/raid/dispatch", () => {
     const i1 = await giveItem(atk.player_id, "attack_common");
 
     const res = await post("/api/raid/dispatch", atk.player_id, atk.secret, {
-      target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [i1],
+      target_player_id: def.player_id, target_post_token: "post_a", item_ids: [i1],
     });
     const json = (await res.json()) as any;
     expect(res.status).toBe(400);
@@ -160,7 +160,7 @@ describe("POST /api/raid/dispatch", () => {
     const i1 = await giveItem(atk.player_id, "attack_common");
 
     const res = await post("/api/raid/dispatch", atk.player_id, atk.secret, {
-      target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [i1],
+      target_player_id: def.player_id, target_post_token: "post_a", item_ids: [i1],
     });
     const json = (await res.json()) as any;
     expect(res.status).toBe(200);
@@ -175,8 +175,8 @@ describe("POST /api/raid/dispatch", () => {
     const i1 = await giveItem(atk.player_id, "attack_common");
     const i2 = await giveItem(atk.player_id, "attack_common");
 
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [i1] });
-    const res = await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [i2] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [i1] });
+    const res = await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [i2] });
     expect(res.status).toBe(409);
   });
 
@@ -186,9 +186,9 @@ describe("POST /api/raid/dispatch", () => {
     const def = await registerPlayer("Def");
     await addPost(def.player_id, "post_a", 2);
     const defItem = await giveItem(atk.player_id, "defense_common");
-    const bad = await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [defItem] });
+    const bad = await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [defItem] });
     expect(bad.status).toBe(400);
-    const self = await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: atk.player_id, target_post_hex: "post_a", item_ids: [] });
+    const self = await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: atk.player_id, target_post_token: "post_a", item_ids: [] });
     expect(self.status).toBe(400);
   });
 });
@@ -217,7 +217,7 @@ describe("GET /api/raid/cooldowns", () => {
     const i1 = await giveItem(atk.player_id, "attack_common");
     const now = Math.floor(Date.now() / 1000);
 
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [i1] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [i1] });
 
     const res = await get("/api/raid/cooldowns", atk.player_id, atk.secret);
     const json = (await res.json()) as any;
@@ -241,7 +241,7 @@ describe("raid resolution + defense", () => {
     await addPost(def.player_id, "post_a", 1);
     const item = await giveItem(atk.player_id, "attack_rare"); // 75 power > 50 hp
 
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [item] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [item] });
     await makeRaidDue(def.player_id);
 
     const state = await getDefense(def.player_id, def.secret);
@@ -256,8 +256,8 @@ describe("raid resolution + defense", () => {
     const atkItem = await giveItem(atk.player_id, "attack_rare"); // 75 -> razes unboosted lvl1
     const defItem = await giveItem(def.player_id, "defense_epic"); // +300 flat HP
 
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [atkItem] });
-    await post("/api/defend/boost", def.player_id, def.secret, { post_hex: "post_a", item_ids: [defItem] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [atkItem] });
+    await post("/api/defend/boost", def.player_id, def.secret, { post_token: "post_a", item_ids: [defItem] });
     await makeRaidDue(def.player_id);
 
     const state = await getDefense(def.player_id, def.secret);
@@ -280,8 +280,8 @@ describe("raid resolution + defense", () => {
     const i1 = await giveItem(atk1.player_id, "attack_rare"); // razes lvl1
     const i2 = await giveItem(atk2.player_id, "attack_rare");
 
-    await post("/api/raid/dispatch", atk1.player_id, atk1.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [i1] });
-    await post("/api/raid/dispatch", atk2.player_id, atk2.secret, { target_player_id: def.player_id, target_post_hex: "post_b", item_ids: [i2] });
+    await post("/api/raid/dispatch", atk1.player_id, atk1.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [i1] });
+    await post("/api/raid/dispatch", atk2.player_id, atk2.secret, { target_player_id: def.player_id, target_post_token: "post_b", item_ids: [i2] });
     await makeRaidDue(def.player_id);
 
     const state = await getDefense(def.player_id, def.secret);
@@ -299,7 +299,7 @@ describe("raid resolution + defense", () => {
     await addPost(def.player_id, "post_a", 1);
     const item = await giveItem(atk.player_id, "attack_epic"); // would raze
 
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [item] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [item] });
 
     const state = await getDefense(def.player_id, def.secret);
     const incoming = state.posts[0].incoming_raids;
@@ -337,7 +337,7 @@ describe("GET /api/raid/mine (attacker view)", () => {
     await addPost(def.player_id, "post_a", 3);
     const item = await giveItem(atk.player_id, "attack_common");
 
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [item] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [item] });
 
     const mine = await getMine(atk.player_id, atk.secret);
     expect(mine.active_raid_id).not.toBeNull();
@@ -353,7 +353,7 @@ describe("GET /api/raid/mine (attacker view)", () => {
     await addPost(def.player_id, "post_a", 1);
     const item = await giveItem(atk.player_id, "attack_rare"); // razes lvl1
 
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [item] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [item] });
     await makeRaidDue(def.player_id);
 
     const mine = await getMine(atk.player_id, atk.secret); // resolveDueRaids runs here
@@ -375,7 +375,7 @@ describe("GET /api/raid/mine (attacker view)", () => {
     await addPost(def.player_id, "post_b", 3);
     const item = await giveItem(atk.player_id, "attack_epic");
 
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_b", item_ids: [item] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_b", item_ids: [item] });
     await makeRaidDue(def.player_id);
 
     const mine = await getMine(atk.player_id, atk.secret);
@@ -406,7 +406,7 @@ describe("GET /api/raid/mine — atomic resolution keeps the lock consistent", (
     const def = await registerPlayer("Def");
     await addPost(def.player_id, "post_a", 1);
     const item = await giveItem(atk.player_id, "attack_rare");
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [item] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [item] });
     // Lock is held while the raid is in flight.
     expect(await env.ATTACKS.get(`araid:${atk.player_id}`)).not.toBeNull();
 
@@ -426,7 +426,7 @@ describe("GET /api/raid/mine — atomic resolution keeps the lock consistent", (
     const def = await registerPlayer("Def");
     await addPost(def.player_id, "post_a", 3);
     const item = await giveItem(atk.player_id, "attack_common");
-    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [item] });
+    await post("/api/raid/dispatch", atk.player_id, atk.secret, { target_player_id: def.player_id, target_post_token: "post_a", item_ids: [item] });
 
     const mine = await getMine(atk.player_id, atk.secret);
     expect(mine.active_raid_id).not.toBeNull();
@@ -447,7 +447,7 @@ describe("recon reveals HP + permanent wall", () => {
     const res = await post("/api/scout", atk.player_id, atk.secret, { target_player_id: def.player_id, probe_item_id: probe });
     const json = (await res.json()) as any;
     expect(res.status).toBe(200);
-    const p = json.posts.find((x: any) => x.post_hex === "post_a");
+    const p = json.posts.find((x: any) => x.post_token === "post_a");
     expect(p.hp).toBeGreaterThan(0);
     expect(p.max_hp).toBeGreaterThan(0);
     expect(typeof p.defense_reduction).toBe("number");

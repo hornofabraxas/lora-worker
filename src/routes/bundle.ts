@@ -276,7 +276,7 @@ app.post("/api/bundle", async (c) => {
     // clear the tombstone so the same location can be chartered fresh later.
     const tombPrefix = razeTombstonePrefix(playerId);
     const tombstoned = new Set(snap.ranges[0].map((row) => row.key.slice(tombPrefix.length)));
-    const incomingHexes = new Set(body.post_summaries.map((p) => p.post_hex));
+    const incomingHexes = new Set(body.post_summaries.map((p) => p.post_token));
     for (const hex of tombstoned) {
       if (!incomingHexes.has(hex)) buf.del(NS.DEFENSE, razeTombstoneKey(playerId, hex));
     }
@@ -295,20 +295,20 @@ app.post("/api/bundle", async (c) => {
     // self-harm — never an abuse).
     const firstSeen = { ...(player.post_first_seen ?? {}) };
     const firstLevel = { ...(player.post_first_level ?? {}) };
-    const priorByHex = new Map(player.post_summaries.map((p) => [p.post_hex, p]));
+    const priorByHex = new Map(player.post_summaries.map((p) => [p.post_token, p]));
     const validated: PostSummary[] = [];
     for (const p of body.post_summaries) {
-      if (tombstoned.has(p.post_hex)) continue;
-      let seen = firstSeen[p.post_hex];
+      if (tombstoned.has(p.post_token)) continue;
+      let seen = firstSeen[p.post_token];
       if (seen === undefined) {
-        seen = priorByHex.get(p.post_hex)?.chartered_at ?? nowSec;
-        firstSeen[p.post_hex] = seen;
+        seen = priorByHex.get(p.post_token)?.chartered_at ?? nowSec;
+        firstSeen[p.post_token] = seen;
       }
       const level = Math.min(MAX_POST_LEVEL, Math.max(1, Math.floor(p.level ?? 1)));
       // Record the level we first saw, once, so the admin flags report can tell
       // growth it witnessed from a post that simply arrived established.
-      if (firstLevel[p.post_hex] === undefined) {
-        firstLevel[p.post_hex] = priorByHex.get(p.post_hex)?.level ?? level;
+      if (firstLevel[p.post_token] === undefined) {
+        firstLevel[p.post_token] = priorByHex.get(p.post_token)?.level ?? level;
       }
       const chartered_at = Math.max(p.chartered_at ?? nowSec, seen);
       let dormant_until = p.dormant_until ?? 0;
@@ -323,7 +323,7 @@ app.post("/api/bundle", async (c) => {
     player.post_summaries = kept;
 
     // Retain first-seen only for posts still asserted, so the map stays bounded.
-    const keptHexes = new Set(kept.map((p) => p.post_hex));
+    const keptHexes = new Set(kept.map((p) => p.post_token));
     player.post_first_seen = Object.fromEntries(
       Object.entries(firstSeen).filter(([hex]) => keptHexes.has(hex)),
     );

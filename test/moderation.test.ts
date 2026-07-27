@@ -22,12 +22,12 @@ function adminReq(path: string, method: string, body?: unknown, secret: string |
   });
 }
 
-async function seedPlayer(displayName: string, postHex = "88aaaa0001fffff"): Promise<string> {
+async function seedPlayer(displayName: string, postToken = "88aaaa0001fffff"): Promise<string> {
   const res = await app.fetch(adminReq("/api/admin/seed-player", "POST", {
     display_name: displayName,
     coarse_cells: ["8329a0fffffffff"],
     coarse_centroid: { lat: 51.5, lng: -0.1 },
-    posts: [{ post_hex: postHex, level: 3 }],
+    posts: [{ post_token: postToken, level: 3 }],
   }), env);
   const seeded = await res.json() as { player_id: string };
   return seeded.player_id;
@@ -36,7 +36,7 @@ async function seedPlayer(displayName: string, postHex = "88aaaa0001fffff"): Pro
 async function leaderboardRow(id: string) {
   const viewer = await registerViewer(env);
   const lb = await getLeaderboardAs<{
-    players: { player_id: string; display_name: string; posts: { post_hex: string; name: string }[] }[];
+    players: { player_id: string; display_name: string; posts: { post_token: string; name: string }[] }[];
   }>(env, viewer);
   return lb.players.find((p) => p.player_id === id);
 }
@@ -71,13 +71,13 @@ describe("name moderation", () => {
     const hex = "88aaaa0007fffff";
     const id = await seedPlayer("CleanName", hex);
     await app.fetch(adminReq("/api/admin/censor", "POST", {
-      type: "post", player_id: id, post_hex: hex,
+      type: "post", player_id: id, post_token: hex,
     }), env);
     const row = await leaderboardRow(id);
-    expect(row?.posts.find((p) => p.post_hex === hex)?.name).toBe("Outpost");
+    expect(row?.posts.find((p) => p.post_token === hex)?.name).toBe("Outpost");
   });
 
-  it("requires post_hex when censoring a post", async () => {
+  it("requires post_token when censoring a post", async () => {
     const id = await seedPlayer("NoHex");
     const res = await app.fetch(adminReq("/api/admin/censor", "POST", { type: "post", player_id: id }), env);
     expect(res.status).toBe(400);

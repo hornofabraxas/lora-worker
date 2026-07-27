@@ -177,7 +177,7 @@ describe("POST /api/shop/salvage", () => {
     // Mark it installed directly in the store.
     const stored = (await env.PLAYERS.get(`player:${player.player_id}`, "json")) as any;
     stored.items = stored.items.map((i: any) =>
-      i.id === id1 ? { ...i, installed_post_hex: "8a2a1072b59ffff" } : i);
+      i.id === id1 ? { ...i, installed_post_token: "8a2a1072b59ffff" } : i);
     await env.PLAYERS.put(`player:${player.player_id}`, JSON.stringify(stored));
 
     const res = await salvage(player, [id1]);

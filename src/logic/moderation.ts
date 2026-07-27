@@ -19,14 +19,14 @@ export const POST_FALLBACK = "Outpost";
 export const PLAYER_FALLBACK = "Surveyor";
 
 export interface ModerationOverrides {
-  /** "<player_id>:<post_hex>" -> replacement ("" = neutral fallback). */
+  /** "<player_id>:<post_token>" -> replacement ("" = neutral fallback). */
   posts: Record<string, string>;
   /** "<player_id>" -> replacement ("" = neutral fallback). */
   players: Record<string, string>;
 }
 
-export function postOverrideKey(playerId: string, postHex: string): string {
-  return `${playerId}:${postHex}`;
+export function postOverrideKey(playerId: string, postToken: string): string {
+  return `${playerId}:${postToken}`;
 }
 
 export async function getOverrides(env: Env): Promise<ModerationOverrides> {
@@ -53,10 +53,10 @@ export async function putOverrides(env: Env, o: ModerationOverrides): Promise<vo
 export function applyPostName(
   o: ModerationOverrides,
   playerId: string,
-  postHex: string,
+  postToken: string,
   name: string,
 ): string {
-  const k = postOverrideKey(playerId, postHex);
+  const k = postOverrideKey(playerId, postToken);
   if (Object.prototype.hasOwnProperty.call(o.posts, k)) {
     return o.posts[k] || POST_FALLBACK;
   }

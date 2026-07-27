@@ -77,16 +77,16 @@ export function reasonsFor(player: PlayerProfile, auditRejects: number, now: num
     // registrant, since first-seen is their registration moment — and a post
     // predating post_first_level (undefined) can't be judged at all. Flagging
     // either would fire on exactly the players worth welcoming.
-    const firstLevel = player.post_first_level?.[post.post_hex];
+    const firstLevel = player.post_first_level?.[post.post_token];
     if (firstLevel === undefined || firstLevel >= MAX_POST_LEVEL) continue;
 
     // Measure from when we started watching, not from the claimed charter date.
-    const watchedFrom = player.post_first_seen?.[post.post_hex] ?? post.chartered_at;
+    const watchedFrom = player.post_first_seen?.[post.post_token] ?? post.chartered_at;
     const ageDays = (now - watchedFrom) / 86400;
     if (ageDays < INSTANT_MAX_LEVEL_AGE_DAYS) {
       reasons.push({
-        code: `instant_max_level:${post.post_hex}`,
-        text: `post ${post.post_hex} climbed from level ${firstLevel} to max in ${ageDays.toFixed(1)}d`,
+        code: `instant_max_level:${post.post_token}`,
+        text: `post ${post.post_token} climbed from level ${firstLevel} to max in ${ageDays.toFixed(1)}d`,
       });
     }
   }

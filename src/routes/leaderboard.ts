@@ -29,10 +29,10 @@ app.get("/api/leaderboard", authMiddleware, async (c) => {
     total_renown: e.total_renown,
     renown_per_day: e.renown_per_day,
     post_count: e.post_count,
-    post_hexes: e.post_hexes,
+    post_tokens: e.post_tokens,
     posts: e.posts.map((p) => ({
-      post_hex: p.post_hex,
-      name: applyPostName(overrides, e.player_id, p.post_hex, p.name),
+      post_token: p.post_token,
+      name: applyPostName(overrides, e.player_id, p.post_token, p.name),
     })),
     under_siege: false,
   }));

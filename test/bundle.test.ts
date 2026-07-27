@@ -289,7 +289,7 @@ describe("POST /api/bundle", () => {
       field_notes_earned: 0,
       post_surveys: [],
       coarse_cells: [],
-      post_summaries: [{ post_hex: "hex_admin", level: 1, chartered_at: Math.floor(Date.now() / 1000), coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_admin", level: 1, chartered_at: Math.floor(Date.now() / 1000), coarse_cell: "831a00fffffffff" }],
       active_title: "Steadfast",
       timestamp: Math.floor(Date.now() / 1000),
     });
@@ -314,7 +314,7 @@ describe("POST /api/bundle", () => {
 
     // The administration in the same bundle still landed.
     const stored = await env.PLAYERS.get(`player:${player_id}`, "json") as any;
-    expect(stored.post_summaries.find((p: any) => p.post_hex === "hex_admin")).toBeDefined();
+    expect(stored.post_summaries.find((p: any) => p.post_token === "hex_admin")).toBeDefined();
     expect(stored.active_title).toBe("Steadfast");
   });
 
@@ -359,7 +359,7 @@ describe("POST /api/bundle", () => {
 
     const raw = await env.PLAYERS.get(`player:${player_id}`, "json") as any;
     raw.post_summaries = [{
-      post_hex: "hex_a", level: 3,
+      post_token: "hex_a", level: 3,
       chartered_at: Math.floor(Date.now() / 1000) - 86400,
       coarse_cell: "831a00fffffffff",
     }];
@@ -372,7 +372,7 @@ describe("POST /api/bundle", () => {
       xp_earned: 0,
       field_notes_earned: 0,
       post_surveys: [],
-      post_summaries: [{ post_hex: "hex_a", level: 2, chartered_at: Math.floor(Date.now() / 1000) - 86400, coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_a", level: 2, chartered_at: Math.floor(Date.now() / 1000) - 86400, coarse_cell: "831a00fffffffff" }],
       coarse_cells: [],
       timestamp: Math.floor(Date.now() / 1000),
     });
@@ -389,7 +389,7 @@ describe("POST /api/bundle", () => {
 
     expect(res.status).toBe(200);
     const stored = await env.PLAYERS.get(`player:${player_id}`, "json") as any;
-    expect(stored.post_summaries.find((p: any) => p.post_hex === "hex_a").level).toBe(2);
+    expect(stored.post_summaries.find((p: any) => p.post_token === "hex_a").level).toBe(2);
   });
 
   it("keeps a razed post gone even if the bundle re-sends it, then re-allows it after reconcile", async () => {
@@ -406,7 +406,7 @@ describe("POST /api/bundle", () => {
     const body1 = JSON.stringify({
       survey_count: 0, discoveries: 0, provisions_earned: 0, xp_earned: 0,
       field_notes_earned: 0, post_surveys: [], coarse_cells: [],
-      post_summaries: [{ post_hex: "hex_razed", level: 2, chartered_at: 1, coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_razed", level: 2, chartered_at: 1, coarse_cell: "831a00fffffffff" }],
       timestamp: Math.floor(Date.now() / 1000),
     });
     const res1 = await app.fetch(new Request("http://localhost/api/bundle", {
@@ -414,7 +414,7 @@ describe("POST /api/bundle", () => {
     }), env);
     expect(res1.status).toBe(200);
     let stored = await env.PLAYERS.get(`player:${player_id}`, "json") as any;
-    expect(stored.post_summaries.find((p: any) => p.post_hex === "hex_razed")).toBeUndefined();
+    expect(stored.post_summaries.find((p: any) => p.post_token === "hex_razed")).toBeUndefined();
 
     // Server reconciled (stops sending it): the tombstone self-clears.
     const body2 = JSON.stringify({
@@ -433,7 +433,7 @@ describe("POST /api/bundle", () => {
     const body3 = JSON.stringify({
       survey_count: 0, discoveries: 0, provisions_earned: 0, xp_earned: 0,
       field_notes_earned: 0, post_surveys: [], coarse_cells: [],
-      post_summaries: [{ post_hex: "hex_razed", level: 1, chartered_at: Math.floor(Date.now() / 1000), coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_razed", level: 1, chartered_at: Math.floor(Date.now() / 1000), coarse_cell: "831a00fffffffff" }],
       timestamp: Math.floor(Date.now() / 1000) + 2,
     });
     const res3 = await app.fetch(new Request("http://localhost/api/bundle", {
@@ -441,7 +441,7 @@ describe("POST /api/bundle", () => {
     }), env);
     expect(res3.status).toBe(200);
     stored = await env.PLAYERS.get(`player:${player_id}`, "json") as any;
-    expect(stored.post_summaries.find((p: any) => p.post_hex === "hex_razed").level).toBe(1);
+    expect(stored.post_summaries.find((p: any) => p.post_token === "hex_razed").level).toBe(1);
   });
 
   it("allows post level jump > 1", async () => {
@@ -450,7 +450,7 @@ describe("POST /api/bundle", () => {
     // Give player a level 1 post
     const raw = await env.PLAYERS.get(`player:${player_id}`, "json") as any;
     raw.post_summaries = [{
-      post_hex: "hex_a", level: 1,
+      post_token: "hex_a", level: 1,
       chartered_at: Math.floor(Date.now() / 1000) - 86400,
       coarse_cell: "831a00fffffffff",
     }];
@@ -463,7 +463,7 @@ describe("POST /api/bundle", () => {
       xp_earned: 0,
       field_notes_earned: 0,
       post_surveys: [],
-      post_summaries: [{ post_hex: "hex_a", level: 3, chartered_at: Math.floor(Date.now() / 1000) - 86400, coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_a", level: 3, chartered_at: Math.floor(Date.now() / 1000) - 86400, coarse_cell: "831a00fffffffff" }],
       coarse_cells: [],
       timestamp: Math.floor(Date.now() / 1000),
     });
@@ -486,7 +486,7 @@ describe("POST /api/bundle", () => {
 
     const raw = await env.PLAYERS.get(`player:${player_id}`, "json") as any;
     raw.post_summaries = [{
-      post_hex: "hex_b", level: 2,
+      post_token: "hex_b", level: 2,
       chartered_at: Math.floor(Date.now() / 1000) - 86400,
       coarse_cell: "831a00fffffffff",
     }];
@@ -499,7 +499,7 @@ describe("POST /api/bundle", () => {
       xp_earned: 0,
       field_notes_earned: 0,
       post_surveys: [],
-      post_summaries: [{ post_hex: "hex_b", level: 3, chartered_at: Math.floor(Date.now() / 1000) - 86400, coarse_cell: "831a00fffffffff" }],
+      post_summaries: [{ post_token: "hex_b", level: 3, chartered_at: Math.floor(Date.now() / 1000) - 86400, coarse_cell: "831a00fffffffff" }],
       coarse_cells: [],
       timestamp: Math.floor(Date.now() / 1000),
     });

@@ -98,7 +98,7 @@ app.post("/api/shop/salvage", authMiddleware, async (c) => {
   const removed: string[] = [];
   const kept: ItemRecord[] = [];
   for (const it of player.items) {
-    if (wanted.has(it.id) && !it.used && !it.installed_post_hex) {
+    if (wanted.has(it.id) && !it.used && !it.installed_post_token) {
       removed.push(it.id);
     } else {
       kept.push(it);

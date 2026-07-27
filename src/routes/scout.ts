@@ -70,10 +70,10 @@ app.post("/api/scout", authMiddleware, async (c) => {
   const overrides = await getOverrides(c.env);
   const postDetails = [];
   for (const p of target.post_summaries) {
-    const def = await getOrCreateDefense(c.env, target_player_id, p.post_hex, p.level);
+    const def = await getOrCreateDefense(c.env, target_player_id, p.post_token, p.level);
     postDetails.push({
-      post_hex: p.post_hex,
-      name: applyPostName(overrides, target_player_id, p.post_hex, p.name ?? ""),
+      post_token: p.post_token,
+      name: applyPostName(overrides, target_player_id, p.post_token, p.name ?? ""),
       level: p.level,
       age_days: Math.floor((now - p.chartered_at) / 86400),
       hp: def.hp,

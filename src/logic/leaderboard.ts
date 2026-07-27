@@ -14,7 +14,7 @@ export const LEADERBOARD_STALE_SECONDS = 6 * 3600;
 
 // One precomputed row per player. Names are stored raw and moderated at read
 // time (so an operator censor takes effect immediately without a rebuild).
-// post_hex values are opaque per-post tokens minted by the game server — they
+// post_token values are opaque per-post tokens minted by the game server — they
 // identify a raid/scout target, not a place.
 export interface LeaderboardEntry {
   player_id: string;
@@ -23,8 +23,8 @@ export interface LeaderboardEntry {
   total_renown: number;
   renown_per_day: number;
   post_count: number;
-  post_hexes: string[];
-  posts: { post_hex: string; name: string }[];
+  post_tokens: string[];
+  posts: { post_token: string; name: string }[];
 }
 
 export interface LeaderboardCache {
@@ -40,8 +40,8 @@ function toEntry(p: PlayerProfile, now: number): LeaderboardEntry {
     total_renown: totalRenown(p.post_summaries, now),
     renown_per_day: totalRenownPerDay(p.post_summaries, now),
     post_count: p.post_summaries.length,
-    post_hexes: p.post_summaries.map((s) => s.post_hex),
-    posts: p.post_summaries.map((s) => ({ post_hex: s.post_hex, name: s.name ?? "" })),
+    post_tokens: p.post_summaries.map((s) => s.post_token),
+    posts: p.post_summaries.map((s) => ({ post_token: s.post_token, name: s.name ?? "" })),
   };
 }
 

@@ -63,7 +63,7 @@ export interface PlayerProfile {
 }
 
 export interface PostSummary {
-  post_hex: string;
+  post_token: string;
   level: number;
   chartered_at: number;
   coarse_cell: string;
@@ -88,7 +88,7 @@ export interface ItemRecord {
   type: ItemType;
   assigned_at: number;
   used: boolean;
-  installed_post_hex?: string;
+  installed_post_token?: string;
 }
 
 export type ItemType =
@@ -247,7 +247,7 @@ export interface RaidRecord {
   attacker_name: string;
   target_player_id: string;
   target_player_name: string;
-  target_post_hex: string;
+  target_post_token: string;
   // Name of the raided outpost at dispatch time, so the attacker's result card
   // and the defender's notification can name the post rather than just the hex.
   target_post_name?: string;

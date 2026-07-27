@@ -6,8 +6,8 @@ import { regenPostHp } from "../src/logic/cron.js";
 
 let env: Env;
 
-async function seedDefense(playerId: string, postHex: string, defense: DefenseValues) {
-  await env.DEFENSE.put(`defense:${playerId}:${postHex}`, JSON.stringify(defense));
+async function seedDefense(playerId: string, postToken: string, defense: DefenseValues) {
+  await env.DEFENSE.put(`defense:${playerId}:${postToken}`, JSON.stringify(defense));
 }
 
 describe("regenPostHp", () => {

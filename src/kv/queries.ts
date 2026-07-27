@@ -136,12 +136,12 @@ export async function appendNotification(env: Env, playerId: string, notificatio
   await env.SCOUTS.put(notificationsKey(playerId), JSON.stringify(existing));
 }
 
-export async function getDefense(env: Env, playerId: string, postHex: string): Promise<DefenseValues | null> {
-  return env.DEFENSE.get<DefenseValues>(defenseKey(playerId, postHex), "json");
+export async function getDefense(env: Env, playerId: string, postToken: string): Promise<DefenseValues | null> {
+  return env.DEFENSE.get<DefenseValues>(defenseKey(playerId, postToken), "json");
 }
 
-export async function putDefense(env: Env, playerId: string, postHex: string, defense: DefenseValues): Promise<void> {
-  await env.DEFENSE.put(defenseKey(playerId, postHex), JSON.stringify(defense));
+export async function putDefense(env: Env, playerId: string, postToken: string, defense: DefenseValues): Promise<void> {
+  await env.DEFENSE.put(defenseKey(playerId, postToken), JSON.stringify(defense));
 }
 
 // The defense row a post starts with before anyone installs an item. Shared by
@@ -160,11 +160,11 @@ export function defaultDefense(postLevel: number, now: number): DefenseValues {
   };
 }
 
-export async function getOrCreateDefense(env: Env, playerId: string, postHex: string, postLevel: number = 1): Promise<DefenseValues> {
-  const existing = await getDefense(env, playerId, postHex);
+export async function getOrCreateDefense(env: Env, playerId: string, postToken: string, postLevel: number = 1): Promise<DefenseValues> {
+  const existing = await getDefense(env, playerId, postToken);
   if (existing) return existing;
   const fresh = defaultDefense(postLevel, Math.floor(Date.now() / 1000));
-  await putDefense(env, playerId, postHex, fresh);
+  await putDefense(env, playerId, postToken, fresh);
   return fresh;
 }
 
@@ -174,8 +174,8 @@ export async function getOrCreateDefense(env: Env, playerId: string, postHex: st
 // a bundle. Cleared once the server stops asserting the post (see the bundle
 // route), so the same location can be chartered fresh afterward.
 
-export async function addRazeTombstone(env: Env, playerId: string, postHex: string): Promise<void> {
-  await env.DEFENSE.put(razeTombstoneKey(playerId, postHex), String(Math.floor(Date.now() / 1000)), {
+export async function addRazeTombstone(env: Env, playerId: string, postToken: string): Promise<void> {
+  await env.DEFENSE.put(razeTombstoneKey(playerId, postToken), String(Math.floor(Date.now() / 1000)), {
     expirationTtl: RAZE_TOMBSTONE_TTL,
   });
 }
@@ -188,8 +188,8 @@ export async function listRazeTombstones(env: Env, playerId: string): Promise<Se
   return hexes;
 }
 
-export async function clearRazeTombstone(env: Env, playerId: string, postHex: string): Promise<void> {
-  await env.DEFENSE.delete(razeTombstoneKey(playerId, postHex));
+export async function clearRazeTombstone(env: Env, playerId: string, postToken: string): Promise<void> {
+  await env.DEFENSE.delete(razeTombstoneKey(playerId, postToken));
 }
 
 // --- Raids (in-flight multi-item combat) -----------------------------------
@@ -246,16 +246,16 @@ export async function getAttackerLastRaid(env: Env, attackerId: string): Promise
   return env.ATTACKS.get<RaidRecord>(`araidlast:${attackerId}`, "json");
 }
 
-export async function getRaidCooldown(env: Env, attackerId: string, targetPostHex: string): Promise<number | null> {
-  const v = await env.ATTACKS.get(`raidcd:${attackerId}:${targetPostHex}`);
+export async function getRaidCooldown(env: Env, attackerId: string, targetPostToken: string): Promise<number | null> {
+  const v = await env.ATTACKS.get(`raidcd:${attackerId}:${targetPostToken}`);
   return v ? parseInt(v, 10) : null;
 }
 
-export async function setRaidCooldown(env: Env, attackerId: string, targetPostHex: string, now: number): Promise<void> {
-  await env.ATTACKS.put(`raidcd:${attackerId}:${targetPostHex}`, String(now), { expirationTtl: 86400 });
+export async function setRaidCooldown(env: Env, attackerId: string, targetPostToken: string, now: number): Promise<void> {
+  await env.ATTACKS.put(`raidcd:${attackerId}:${targetPostToken}`, String(now), { expirationTtl: 86400 });
 }
 
-// All of an attacker's live per-target cooldowns, keyed by target_post_hex —
+// All of an attacker's live per-target cooldowns, keyed by target_post_token —
 // one RPC via listValues instead of a get-per-target loop. Expired entries
 // don't appear (the KV TTL already reclaims them), so callers never need to
 // re-check RAID_COOLDOWN_SECONDS themselves beyond what's returned here.
@@ -264,8 +264,8 @@ export async function getRaidCooldowns(env: Env, attackerId: string): Promise<Re
   const rows = await batch(env.ATTACKS).listValues(prefix);
   const out: Record<string, number> = {};
   for (const row of rows) {
-    const targetPostHex = row.name.slice(prefix.length);
-    out[targetPostHex] = parseInt(row.value, 10);
+    const targetPostToken = row.name.slice(prefix.length);
+    out[targetPostToken] = parseInt(row.value, 10);
   }
   return out;
 }

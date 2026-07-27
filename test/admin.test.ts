@@ -27,9 +27,9 @@ const SAMPLE = {
   coarse_cells: ["8329a0fffffffff"],
   coarse_centroid: { lat: 51.5, lng: -0.1 },
   posts: [
-    { post_hex: "88aaaa0001fffff", level: 2 },
-    { post_hex: "88aaaa0003fffff", level: 3, defense: { defense_item: "defense_common", defense_value: 10 } },
-    { post_hex: "88aaaa0005fffff", level: 4, defense: { defense_item: "defense_rare", defense_value: 50 } },
+    { post_token: "88aaaa0001fffff", level: 2 },
+    { post_token: "88aaaa0003fffff", level: 3, defense: { defense_item: "defense_common", defense_value: 10 } },
+    { post_token: "88aaaa0005fffff", level: 4, defense: { defense_item: "defense_rare", defense_value: 50 } },
   ],
 };
 
@@ -107,7 +107,7 @@ describe("admin trim-items (legacy stockpile purge)", () => {
     display_name: "Hoarder",
     coarse_cells: ["8329a0fffffffff"],
     player_id: "hoarder1",
-    posts: [{ post_hex: "88aaaa0001fffff", level: 2 }],
+    posts: [{ post_token: "88aaaa0001fffff", level: 2 }],
     items: [
       // 4 free defense_epic (assigned oldest→newest), 1 used, 1 installed.
       { id: "e0", type: "defense_epic", assigned_at: now - 500, used: false },
@@ -115,7 +115,7 @@ describe("admin trim-items (legacy stockpile purge)", () => {
       { id: "e2", type: "defense_epic", assigned_at: now - 300, used: false },
       { id: "e3", type: "defense_epic", assigned_at: now - 200, used: false },
       { id: "eu", type: "defense_epic", assigned_at: now - 100, used: true },
-      { id: "ei", type: "defense_epic", assigned_at: now - 50, used: false, installed_post_hex: "88aaaa0001fffff" },
+      { id: "ei", type: "defense_epic", assigned_at: now - 50, used: false, installed_post_token: "88aaaa0001fffff" },
     ],
   };
 

@@ -55,14 +55,14 @@ export function assembleDefensePosts(
 ) {
   const posts = [];
   for (const post of postSummaries) {
-    let defense = defByHex.get(post.post_hex);
+    let defense = defByHex.get(post.post_token);
     if (!defense) {
       defense = defaultDefense(post.level, now);
-      missing.put(NS.DEFENSE, defenseKey(pid, post.post_hex), JSON.stringify(defense));
+      missing.put(NS.DEFENSE, defenseKey(pid, post.post_token), JSON.stringify(defense));
     }
     // Inbound raids on this post — coarse threat only, no attacker composition.
     const incoming = inFlight
-      .filter((r) => r.target_post_hex === post.post_hex)
+      .filter((r) => r.target_post_token === post.post_token)
       .map((r) => ({
         raid_id: r.raid_id,
         arrives_at: r.arrives_at,
@@ -71,7 +71,7 @@ export function assembleDefensePosts(
       }));
     const liveBoosts = activeBoosts(defense, now);
     posts.push({
-      post_hex: post.post_hex,
+      post_token: post.post_token,
       ...defense,
       defense_pct: defenseReduction(defense),
       boost_hp: liveBoosts.reduce((s, b) => s + b.hp_remaining, 0),
@@ -101,18 +101,18 @@ export async function buildDefensePosts(env: Env, player: PlayerProfile, now: nu
   return posts;
 }
 
-function restoreCapKey(playerId: string, postHex: string, timestamp: number): string {
+function restoreCapKey(playerId: string, postToken: string, timestamp: number): string {
   const date = new Date(timestamp * 1000).toISOString().slice(0, 10);
-  return `restore_hp:${playerId}:${postHex}:${date}`;
+  return `restore_hp:${playerId}:${postToken}:${date}`;
 }
 
 app.post("/api/defend/install", authMiddleware, async (c) => {
   const playerId = c.get("playerId");
   const body = await c.req.json();
-  const { post_hex, item_id } = body;
+  const { post_token, item_id } = body;
 
-  if (!post_hex || !item_id) {
-    return c.json({ ok: false, error: "Missing post_hex or item_id" }, 400);
+  if (!post_token || !item_id) {
+    return c.json({ ok: false, error: "Missing post_token or item_id" }, 400);
   }
 
   const player = await getPlayer(c.env, playerId);
@@ -120,7 +120,7 @@ app.post("/api/defend/install", authMiddleware, async (c) => {
     return c.json({ ok: false, error: "Player not found" }, 404);
   }
 
-  const postSummary = player.post_summaries.find((p) => p.post_hex === post_hex);
+  const postSummary = player.post_summaries.find((p) => p.post_token === post_token);
   if (!postSummary) {
     return c.json({ ok: false, error: "Post not found" }, 400);
   }
@@ -140,16 +140,16 @@ app.post("/api/defend/install", authMiddleware, async (c) => {
   const defensePct = ITEM_DEFENSE_PCT[item.type] ?? 0;
 
   player.items[itemIdx].used = true;
-  player.items[itemIdx].installed_post_hex = post_hex;
+  player.items[itemIdx].installed_post_token = post_token;
   await putPlayer(c.env, player);
 
-  const defense = await getOrCreateDefense(c.env, playerId, post_hex, postSummary.level);
+  const defense = await getOrCreateDefense(c.env, playerId, post_token, postSummary.level);
 
   // Single slot — replace existing item (old one is consumed). defense_value now
   // stores the damage-reduction fraction for this item.
   defense.defense_item = item.type;
   defense.defense_value = defensePct;
-  await putDefense(c.env, playerId, post_hex, defense);
+  await putDefense(c.env, playerId, post_token, defense);
 
   return c.json({
     ok: true,
@@ -167,16 +167,16 @@ app.post("/api/defend/install", authMiddleware, async (c) => {
 app.post("/api/defend/boost", authMiddleware, async (c) => {
   const playerId = c.get("playerId");
   const body = await c.req.json();
-  const { post_hex, item_ids } = body;
+  const { post_token, item_ids } = body;
 
-  if (!post_hex || !Array.isArray(item_ids) || item_ids.length === 0) {
-    return c.json({ ok: false, error: "Missing post_hex or item_ids" }, 400);
+  if (!post_token || !Array.isArray(item_ids) || item_ids.length === 0) {
+    return c.json({ ok: false, error: "Missing post_token or item_ids" }, 400);
   }
 
   const player = await getPlayer(c.env, playerId);
   if (!player) return c.json({ ok: false, error: "Player not found" }, 404);
 
-  const postSummary = player.post_summaries.find((p) => p.post_hex === post_hex);
+  const postSummary = player.post_summaries.find((p) => p.post_token === post_token);
   if (!postSummary) return c.json({ ok: false, error: "Post not found" }, 400);
 
   const ids = new Set<string>(item_ids);
@@ -186,7 +186,7 @@ app.post("/api/defend/boost", authMiddleware, async (c) => {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const defense = await getOrCreateDefense(c.env, playerId, post_hex, postSummary.level);
+  const defense = await getOrCreateDefense(c.env, playerId, post_token, postSummary.level);
 
   const kept = activeBoosts(defense, now);
   // Hard cap on concurrently-live boosts (see MAX_ACTIVE_BOOSTS). Reject rather
@@ -212,7 +212,7 @@ app.post("/api/defend/boost", authMiddleware, async (c) => {
     if (ids.has(item.id)) item.used = true;
   }
   await putPlayer(c.env, player);
-  await putDefense(c.env, playerId, post_hex, defense);
+  await putDefense(c.env, playerId, post_token, defense);
 
   const totalBoostHp = kept.reduce((s, b) => s + b.hp_remaining, 0);
   return c.json({
@@ -226,10 +226,10 @@ app.post("/api/defend/boost", authMiddleware, async (c) => {
 app.post("/api/defend/restore", authMiddleware, async (c) => {
   const playerId = c.get("playerId");
   const body = await c.req.json();
-  const { post_hex, provisions_spent } = body;
+  const { post_token, provisions_spent } = body;
 
-  if (!post_hex || typeof provisions_spent !== "number" || provisions_spent <= 0) {
-    return c.json({ ok: false, error: "Missing post_hex or invalid provisions_spent" }, 400);
+  if (!post_token || typeof provisions_spent !== "number" || provisions_spent <= 0) {
+    return c.json({ ok: false, error: "Missing post_token or invalid provisions_spent" }, 400);
   }
 
   const player = await getPlayer(c.env, playerId);
@@ -237,12 +237,12 @@ app.post("/api/defend/restore", authMiddleware, async (c) => {
     return c.json({ ok: false, error: "Player not found" }, 404);
   }
 
-  const postSummary = player.post_summaries.find((p) => p.post_hex === post_hex);
+  const postSummary = player.post_summaries.find((p) => p.post_token === post_token);
   if (!postSummary) {
     return c.json({ ok: false, error: "Post not found" }, 400);
   }
 
-  const defense = await getOrCreateDefense(c.env, playerId, post_hex, postSummary.level);
+  const defense = await getOrCreateDefense(c.env, playerId, post_token, postSummary.level);
 
   if (defense.hp >= defense.max_hp) {
     return c.json({ ok: false, error: "HP already at maximum" }, 400);
@@ -253,7 +253,7 @@ app.post("/api/defend/restore", authMiddleware, async (c) => {
   // its max so a modified client can't hold a post permanently topped-up through
   // a sustained assault, while a normal defender's repairs are never blocked.
   const now = Math.floor(Date.now() / 1000);
-  const capKey = restoreCapKey(playerId, post_hex, now);
+  const capKey = restoreCapKey(playerId, post_token, now);
   const restoredToday = parseInt(await c.env.META.get(capKey) ?? "0", 10);
   const dailyCap = defense.max_hp * 2;
   const dailyRemaining = Math.max(0, dailyCap - restoredToday);
@@ -267,7 +267,7 @@ app.post("/api/defend/restore", authMiddleware, async (c) => {
 
   defense.hp += hpRestored;
   defense.hp_updated_at = now;
-  await putDefense(c.env, playerId, post_hex, defense);
+  await putDefense(c.env, playerId, post_token, defense);
   await c.env.META.put(capKey, String(restoredToday + hpRestored), { expirationTtl: 172800 });
 
   return c.json({

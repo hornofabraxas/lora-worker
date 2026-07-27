@@ -56,7 +56,7 @@ function randomHex(bytes: number): string {
 }
 
 interface SeedPostInput {
-  post_hex: string;
+  post_token: string;
   level: number;
   chartered_at?: number;
   dormant_until?: number;
@@ -103,7 +103,7 @@ core.post("/seed-player", async (c) => {
 
   const postInputs = body.posts ?? [];
   const post_summaries: PostSummary[] = postInputs.map((p) => ({
-    post_hex: p.post_hex,
+    post_token: p.post_token,
     level: p.level,
     chartered_at: p.chartered_at ?? now - 86400 * 20,
     coarse_cell: "",
@@ -124,10 +124,10 @@ core.post("/seed-player", async (c) => {
         ? { active_title: existing.active_title }
         : {}),
     post_first_seen: Object.fromEntries(
-      postInputs.map((p, i) => [p.post_hex, p.first_seen ?? post_summaries[i].chartered_at]),
+      postInputs.map((p, i) => [p.post_token, p.first_seen ?? post_summaries[i].chartered_at]),
     ),
     post_first_level: Object.fromEntries(
-      postInputs.map((p) => [p.post_hex, p.first_level ?? p.level]),
+      postInputs.map((p) => [p.post_token, p.first_level ?? p.level]),
     ),
   };
 
@@ -149,8 +149,8 @@ core.post("/seed-player", async (c) => {
       ...(p.defense?.boosts ? { boosts: p.defense.boosts } : {}),
       ...(p.defense?.besieged_until ? { besieged_until: p.defense.besieged_until } : {}),
     };
-    await putDefense(c.env, playerId, p.post_hex, def);
-    defenses[p.post_hex] = def;
+    await putDefense(c.env, playerId, p.post_token, def);
+    defenses[p.post_token] = def;
   }
 
   return c.json({ ok: true, player_id: playerId, secret, player, defenses }, existing ? 200 : 201);
@@ -242,7 +242,7 @@ core.get("/player/:id", async (c) => {
 
   const defenses: Record<string, DefenseValues | null> = {};
   for (const p of player.post_summaries) {
-    defenses[p.post_hex] = await getDefense(c.env, id, p.post_hex);
+    defenses[p.post_token] = await getDefense(c.env, id, p.post_token);
   }
   return c.json({ ok: true, player, defenses });
 });
@@ -255,7 +255,7 @@ core.delete("/player/:id", async (c) => {
   if (!player) return c.json({ ok: false, error: "Player not found" }, 404);
 
   for (const p of player.post_summaries) {
-    await c.env.DEFENSE.delete(defenseKey(id, p.post_hex));
+    await c.env.DEFENSE.delete(defenseKey(id, p.post_token));
   }
   await c.env.PLAYERS.delete(`player:${id}`);
   await c.env.PLAYERS.delete(playerLastBundleKey(id));
@@ -283,7 +283,7 @@ core.post("/trim-items", async (c) => {
     const keep = Math.max(0, Math.floor(keepRaw));
     // Only free items are eligible — never touch used or installed inventory.
     const free = player.items
-      .filter((i) => i.type === type && !i.used && !i.installed_post_hex)
+      .filter((i) => i.type === type && !i.used && !i.installed_post_token)
       .sort((a, b) => a.assigned_at - b.assigned_at); // oldest first
     const toRemove = free.slice(keep); // keep the oldest `keep`, remove the rest
     summary[type] = { before: free.length, kept: Math.min(keep, free.length), removed: toRemove.length };
@@ -443,7 +443,7 @@ core.post("/freeze/:id", async (c) => {
 interface CensorInput {
   type: "post" | "player";
   player_id: string;
-  post_hex?: string;
+  post_token?: string;
   // Replacement label; omit or send "" to hide behind the neutral fallback.
   replacement?: string;
 }
@@ -483,7 +483,7 @@ core.get("/names", async (c) => {
     const playerHit = wantPlayers && (!q || name.toLowerCase().includes(q));
     const postHits = wantPosts
       ? player.post_summaries.filter((p) =>
-          !q || (p.name ?? "").toLowerCase().includes(q) || p.post_hex.toLowerCase().includes(q))
+          !q || (p.name ?? "").toLowerCase().includes(q) || p.post_token.toLowerCase().includes(q))
       : [];
     if (!playerHit && postHits.length === 0) continue;
 
@@ -504,10 +504,10 @@ core.get("/names", async (c) => {
       player_override: overrides.players[id] ?? null,
       include_player: playerHit,
       posts: postHits.map((p) => ({
-        post_hex: p.post_hex,
+        post_token: p.post_token,
         name: p.name ?? "",
-        name_public: applyPostName(overrides, id, p.post_hex, p.name ?? ""),
-        override: overrides.posts[postOverrideKey(id, p.post_hex)] ?? null,
+        name_public: applyPostName(overrides, id, p.post_token, p.name ?? ""),
+        override: overrides.posts[postOverrideKey(id, p.post_token)] ?? null,
       })),
     });
   }
@@ -528,10 +528,10 @@ core.post("/censor", async (c) => {
 
   const overrides = await getOverrides(c.env);
   if (body.type === "post") {
-    if (!body.post_hex) {
-      return c.json({ ok: false, error: "post_hex required for type 'post'" }, 400);
+    if (!body.post_token) {
+      return c.json({ ok: false, error: "post_token required for type 'post'" }, 400);
     }
-    overrides.posts[postOverrideKey(body.player_id, body.post_hex)] = replacement;
+    overrides.posts[postOverrideKey(body.player_id, body.post_token)] = replacement;
   } else {
     overrides.players[body.player_id] = replacement;
   }
@@ -543,7 +543,7 @@ core.post("/censor", async (c) => {
 core.delete("/censor", async (c) => {
   const type = c.req.query("type");
   const playerId = c.req.query("player_id");
-  const postHex = c.req.query("post_hex");
+  const postToken = c.req.query("post_token");
   if (type !== "post" && type !== "player") {
     return c.json({ ok: false, error: "type must be 'post' or 'player'" }, 400);
   }
@@ -553,10 +553,10 @@ core.delete("/censor", async (c) => {
 
   const overrides = await getOverrides(c.env);
   if (type === "post") {
-    if (!postHex) {
-      return c.json({ ok: false, error: "post_hex required for type 'post'" }, 400);
+    if (!postToken) {
+      return c.json({ ok: false, error: "post_token required for type 'post'" }, 400);
     }
-    delete overrides.posts[postOverrideKey(playerId, postHex)];
+    delete overrides.posts[postOverrideKey(playerId, postToken)];
   } else {
     delete overrides.players[playerId];
   }

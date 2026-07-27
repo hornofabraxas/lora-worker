@@ -19,10 +19,10 @@ const app = new Hono<{ Bindings: Env; Variables: { playerId: string } }>();
 app.post("/api/raid/dispatch", authMiddleware, async (c) => {
   const playerId = c.get("playerId");
   const body = await c.req.json();
-  const { target_player_id, target_post_hex, item_ids } = body;
+  const { target_player_id, target_post_token, item_ids } = body;
 
-  if (!target_player_id || !target_post_hex || !Array.isArray(item_ids) || item_ids.length === 0) {
-    return c.json({ ok: false, error: "Missing target_player_id, target_post_hex, or item_ids" }, 400);
+  if (!target_player_id || !target_post_token || !Array.isArray(item_ids) || item_ids.length === 0) {
+    return c.json({ ok: false, error: "Missing target_player_id, target_post_token, or item_ids" }, 400);
   }
   if (target_player_id === playerId) {
     return c.json({ ok: false, error: "Cannot raid yourself" }, 400);
@@ -48,7 +48,7 @@ app.post("/api/raid/dispatch", authMiddleware, async (c) => {
   }
 
   // 24h per-target cooldown.
-  const cd = await getRaidCooldown(c.env, playerId, target_post_hex);
+  const cd = await getRaidCooldown(c.env, playerId, target_post_token);
   if (cd && now - cd < RAID_COOLDOWN_SECONDS) {
     const hours = Math.ceil((RAID_COOLDOWN_SECONDS - (now - cd)) / 3600);
     return c.json({ ok: false, error: `Target on cooldown: ${hours}h remaining` }, 400);
@@ -66,7 +66,7 @@ app.post("/api/raid/dispatch", authMiddleware, async (c) => {
 
   const target = await getPlayer(c.env, target_player_id);
   if (!target) return c.json({ ok: false, error: "Target player not found" }, 404);
-  const targetPost = target.post_summaries.find((p) => p.post_hex === target_post_hex);
+  const targetPost = target.post_summaries.find((p) => p.post_token === target_post_token);
   if (!targetPost) return c.json({ ok: false, error: "Target post not found" }, 400);
   if (targetPost.dormant_until && now < targetPost.dormant_until) {
     return c.json({ ok: false, error: "Target outpost is warded (dormant) and cannot be raided" }, 400);
@@ -87,8 +87,8 @@ app.post("/api/raid/dispatch", authMiddleware, async (c) => {
     attacker_name: applyPlayerName(overrides, playerId, player.display_name),
     target_player_id,
     target_player_name: applyPlayerName(overrides, target_player_id, target.display_name),
-    target_post_hex,
-    target_post_name: applyPostName(overrides, target_player_id, target_post_hex, targetPost.name ?? ""),
+    target_post_token,
+    target_post_name: applyPostName(overrides, target_player_id, target_post_token, targetPost.name ?? ""),
     item_types: itemTypes,
     raw_power: rawPower(itemTypes),
     dispatched_at: now,
@@ -99,7 +99,7 @@ app.post("/api/raid/dispatch", authMiddleware, async (c) => {
   await putRaid(c.env, raid);
   await putAttackerLastRaid(c.env, raid);
   await setActiveRaid(c.env, playerId, raid.raid_id);
-  await setRaidCooldown(c.env, playerId, target_post_hex, now);
+  await setRaidCooldown(c.env, playerId, target_post_token, now);
 
   return c.json({
     ok: true,
@@ -118,8 +118,8 @@ app.get("/api/raid/cooldowns", authMiddleware, async (c) => {
   const playerId = c.get("playerId");
   const cooldowns = await getRaidCooldowns(c.env, playerId);
   const expires_at: Record<string, number> = {};
-  for (const [postHex, setAt] of Object.entries(cooldowns)) {
-    expires_at[postHex] = setAt + RAID_COOLDOWN_SECONDS;
+  for (const [postToken, setAt] of Object.entries(cooldowns)) {
+    expires_at[postToken] = setAt + RAID_COOLDOWN_SECONDS;
   }
   return c.json({ ok: true, expires_at });
 });

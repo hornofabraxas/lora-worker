@@ -43,8 +43,8 @@ describe("instant-max-level flag only counts growth we witnessed", () => {
       display_name: "Veteran",
       coarse_cells: ["8329a0fffffffff"],
       posts: [
-        { post_hex: "88cc01fffffffff", level: 5, chartered_at: NOW() },
-        { post_hex: "88cc02fffffffff", level: 5, chartered_at: NOW() },
+        { post_token: "88cc01fffffffff", level: 5, chartered_at: NOW() },
+        { post_token: "88cc02fffffffff", level: 5, chartered_at: NOW() },
       ],
     });
     const data = await flags();
@@ -55,7 +55,7 @@ describe("instant-max-level flag only counts growth we witnessed", () => {
     await seed({
       display_name: "Climber",
       coarse_cells: ["8329a0fffffffff"],
-      posts: [{ post_hex: "88cc03fffffffff", level: 5, chartered_at: NOW(), first_level: 1 }],
+      posts: [{ post_token: "88cc03fffffffff", level: 5, chartered_at: NOW(), first_level: 1 }],
     });
     const row = (await flags()).flagged.find((r: any) => r.display_name === "Climber");
     expect(row).toBeDefined();
@@ -68,7 +68,7 @@ describe("instant-max-level flag only counts growth we witnessed", () => {
       display_name: "Grinder",
       coarse_cells: ["8329a0fffffffff"],
       posts: [{
-        post_hex: "88cc04fffffffff",
+        post_token: "88cc04fffffffff",
         level: 5,
         chartered_at: NOW() - 86400 * 40,
         first_seen: NOW() - 86400 * 40,
@@ -85,10 +85,10 @@ describe("dismissing a finding", () => {
       display_name: name,
       coarse_cells: ["8329a0fffffffff"],
       posts: [
-        { post_hex: "88dd01fffffffff", level: 1 },
-        { post_hex: "88dd02fffffffff", level: 1 },
-        { post_hex: "88dd03fffffffff", level: 1 },
-        { post_hex: "88dd04fffffffff", level: 1 }, // 4 posts > game max 3
+        { post_token: "88dd01fffffffff", level: 1 },
+        { post_token: "88dd02fffffffff", level: 1 },
+        { post_token: "88dd03fffffffff", level: 1 },
+        { post_token: "88dd04fffffffff", level: 1 }, // 4 posts > game max 3
       ],
     });
   }
@@ -123,10 +123,10 @@ describe("dismissing a finding", () => {
       overwrite: true,
       coarse_cells: ["8329a0fffffffff"],
       posts: [
-        { post_hex: "88dd01fffffffff", level: 1 },
-        { post_hex: "88dd02fffffffff", level: 1 },
-        { post_hex: "88dd03fffffffff", level: 1 },
-        { post_hex: "88dd04fffffffff", level: 5, chartered_at: NOW(), first_level: 1 },
+        { post_token: "88dd01fffffffff", level: 1 },
+        { post_token: "88dd02fffffffff", level: 1 },
+        { post_token: "88dd03fffffffff", level: 1 },
+        { post_token: "88dd04fffffffff", level: 5, chartered_at: NOW(), first_level: 1 },
       ],
     });
 
@@ -146,11 +146,11 @@ describe("dismissing a finding", () => {
       overwrite: true,
       coarse_cells: ["8329a0fffffffff"],
       posts: [
-        { post_hex: "88dd01fffffffff", level: 1 },
-        { post_hex: "88dd02fffffffff", level: 1 },
-        { post_hex: "88dd03fffffffff", level: 1 },
-        { post_hex: "88dd04fffffffff", level: 1 },
-        { post_hex: "88dd05fffffffff", level: 1 }, // now 5 posts, same finding
+        { post_token: "88dd01fffffffff", level: 1 },
+        { post_token: "88dd02fffffffff", level: 1 },
+        { post_token: "88dd03fffffffff", level: 1 },
+        { post_token: "88dd04fffffffff", level: 1 },
+        { post_token: "88dd05fffffffff", level: 1 }, // now 5 posts, same finding
       ],
     });
     expect((await flags()).flagged).toHaveLength(0);
@@ -170,7 +170,7 @@ describe("dismissing a finding", () => {
     const id = await seed({
       display_name: "Clean",
       coarse_cells: ["8329a0fffffffff"],
-      posts: [{ post_hex: "88ee01fffffffff", level: 2 }],
+      posts: [{ post_token: "88ee01fffffffff", level: 2 }],
     });
     const res = await app.fetch(req(`/flags/dismiss/${id}`, { method: "POST" }), env);
     expect(res.status).toBe(400);
@@ -185,7 +185,7 @@ describe("a frozen account does not accumulate audit rejects", () => {
       body: JSON.stringify({
         display_name: "Suspended",
         coarse_cells: ["8329a0fffffffff"],
-        posts: [{ post_hex: "88ff01fffffffff", level: 2 }],
+        posts: [{ post_token: "88ff01fffffffff", level: 2 }],
       }),
     }), env);
     const { player_id, secret } = await res.json() as { player_id: string; secret: string };

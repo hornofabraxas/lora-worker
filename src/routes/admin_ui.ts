@@ -321,7 +321,7 @@ const PAGE = `<!DOCTYPE html>
         (p.include_player ? nameRow("player", p.player_id, null, p.display_name, p.display_name_public, p.player_override) : "") +
         (p.include_player && p.posts.length ? "<hr>" : "") +
         p.posts.map(function (r) {
-          return nameRow("post", p.player_id, r.post_hex, r.name, r.name_public, r.override);
+          return nameRow("post", p.player_id, r.post_token, r.name, r.name_public, r.override);
         }).join("") +
         "</div>";
     }).join("");
@@ -361,10 +361,10 @@ const PAGE = `<!DOCTYPE html>
       api("/censor", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ type: kind, player_id: pid, post_hex: hex, replacement: val }),
+        body: JSON.stringify({ type: kind, player_id: pid, post_token: hex, replacement: val }),
       }).then(function () { note("Name censored."); loaders.names(); }).catch(fail);
     } else if (ev.target.closest("[data-clear]")) {
-      var qs = "?type=" + kind + "&player_id=" + encodeURIComponent(pid) + (hex ? "&post_hex=" + encodeURIComponent(hex) : "");
+      var qs = "?type=" + kind + "&player_id=" + encodeURIComponent(pid) + (hex ? "&post_token=" + encodeURIComponent(hex) : "");
       api("/censor" + qs, { method: "DELETE" })
         .then(function () { note("Override cleared."); loaders.names(); }).catch(fail);
     }

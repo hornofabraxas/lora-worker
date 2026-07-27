@@ -46,7 +46,7 @@ export async function resolveDueRaids(env: Env, targetId?: string): Promise<Raid
   };
   for (const raid of due) {
     addRef(NS.PLAYERS, playerKey(raid.target_player_id));
-    addRef(NS.DEFENSE, defenseKey(raid.target_player_id, raid.target_post_hex));
+    addRef(NS.DEFENSE, defenseKey(raid.target_player_id, raid.target_post_token));
     addRef(NS.SCOUTS, notificationsKey(raid.target_player_id));
     addRef(NS.ATTACKS, `araidlast:${raid.attacker_id}`);
   }
@@ -92,7 +92,7 @@ export async function resolveDueRaids(env: Env, targetId?: string): Promise<Raid
 
   for (const raid of due) {
     const target = getPlayerCopy(raid.target_player_id);
-    const post = target?.post_summaries.find((p) => p.post_hex === raid.target_post_hex);
+    const post = target?.post_summaries.find((p) => p.post_token === raid.target_post_token);
 
     if (!target || !post) {
       // Post already gone (e.g. razed by an earlier raid) — the raid fizzles.
@@ -101,10 +101,10 @@ export async function resolveDueRaids(env: Env, targetId?: string): Promise<Raid
       continue;
     }
 
-    const defKey = `${target.player_id}:${post.post_hex}`;
+    const defKey = `${target.player_id}:${post.post_token}`;
     let defense = defenses.get(defKey);
     if (!defense) {
-      defense = read<DefenseValues>(NS.DEFENSE, defenseKey(target.player_id, post.post_hex))
+      defense = read<DefenseValues>(NS.DEFENSE, defenseKey(target.player_id, post.post_token))
         ?? defaultDefense(post.level, now);
       defenses.set(defKey, defense);
     }
@@ -113,7 +113,7 @@ export async function resolveDueRaids(env: Env, targetId?: string): Promise<Raid
     const preLevel = post.level;
     const outcome = resolveRaid(raid, defense, post.level, now);
     defenses.set(defKey, outcome.defense);
-    buf.put(NS.DEFENSE, defenseKey(target.player_id, post.post_hex), JSON.stringify(outcome.defense));
+    buf.put(NS.DEFENSE, defenseKey(target.player_id, post.post_token), JSON.stringify(outcome.defense));
 
     // Raid spoils: a raze pays 10x the razed post's level in marks, a knockdown
     // 2x, a repelled raid nothing. Rides on the record; the attacker credits it.
@@ -122,11 +122,11 @@ export async function resolveDueRaids(env: Env, targetId?: string): Promise<Raid
       outcome.outcome === "damaged" ? 2 * preLevel : 0;
 
     if (outcome.outcome === "razed") {
-      target.post_summaries = target.post_summaries.filter((p) => p.post_hex !== raid.target_post_hex);
+      target.post_summaries = target.post_summaries.filter((p) => p.post_token !== raid.target_post_token);
       buf.put(NS.PLAYERS, playerKey(target.player_id), JSON.stringify(target));
       // Tombstone the hex so a not-yet-reconciled game server can't resurrect the
       // razed post by re-sending it in its next bundle.
-      buf.put(NS.DEFENSE, razeTombstoneKey(target.player_id, raid.target_post_hex), String(now), RAZE_TOMBSTONE_TTL);
+      buf.put(NS.DEFENSE, razeTombstoneKey(target.player_id, raid.target_post_token), String(now), RAZE_TOMBSTONE_TTL);
     } else if (outcome.outcome === "damaged") {
       post.level = outcome.level_after;
       buf.put(NS.PLAYERS, playerKey(target.player_id), JSON.stringify(target));
@@ -155,7 +155,7 @@ export async function resolveDueRaids(env: Env, targetId?: string): Promise<Raid
       type: `raid_${outcome.outcome}`,
       message: msg,
       timestamp: now,
-      data: { raid_id: raid.raid_id, post_hex: raid.target_post_hex, outcome: outcome.outcome, damage: outcome.damage_dealt, level_after: outcome.level_after },
+      data: { raid_id: raid.raid_id, post_token: raid.target_post_token, outcome: outcome.outcome, damage: outcome.damage_dealt, level_after: outcome.level_after },
     });
     buf.put(NS.SCOUTS, notificationsKey(target.player_id), JSON.stringify(notifs));
 

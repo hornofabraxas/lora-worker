@@ -35,10 +35,10 @@ async function makeAuthHeaders(
   };
 }
 
-async function addPostSummary(playerId: string, postHex: string, level: number): Promise<void> {
+async function addPostSummary(playerId: string, postToken: string, level: number): Promise<void> {
   const raw = await env.PLAYERS.get(`player:${playerId}`, "json") as any;
   raw.post_summaries.push({
-    post_hex: postHex,
+    post_token: postToken,
     level,
     chartered_at: Math.floor(Date.now() / 1000) - 86400 * 10,
     coarse_cell: "831a00fffffffff",
@@ -64,7 +64,7 @@ describe("POST /api/defend/install", () => {
     await addPostSummary(player_id, "post_a", 2);
     const itemId = await giveItem(player_id, "defense_common");
 
-    const body = JSON.stringify({ post_hex: "post_a", item_id: itemId });
+    const body = JSON.stringify({ post_token: "post_a", item_id: itemId });
     const headers = await makeAuthHeaders(player_id, secret, body);
 
     const res = await app.fetch(
@@ -84,7 +84,7 @@ describe("POST /api/defend/install", () => {
     await addPostSummary(player_id, "post_b", 3);
     const itemId = await giveItem(player_id, "defense_rare");
 
-    const body = JSON.stringify({ post_hex: "post_b", item_id: itemId });
+    const body = JSON.stringify({ post_token: "post_b", item_id: itemId });
     const headers = await makeAuthHeaders(player_id, secret, body);
 
     const res = await app.fetch(
@@ -104,7 +104,7 @@ describe("POST /api/defend/install", () => {
     const item2 = await giveItem(player_id, "defense_epic");
 
     // Install first
-    const body1 = JSON.stringify({ post_hex: "post_c", item_id: item1 });
+    const body1 = JSON.stringify({ post_token: "post_c", item_id: item1 });
     const headers1 = await makeAuthHeaders(player_id, secret, body1);
     await app.fetch(
       new Request("http://localhost/api/defend/install", { method: "POST", headers: headers1, body: body1 }),
@@ -112,7 +112,7 @@ describe("POST /api/defend/install", () => {
     );
 
     // Install second — should replace
-    const body2 = JSON.stringify({ post_hex: "post_c", item_id: item2 });
+    const body2 = JSON.stringify({ post_token: "post_c", item_id: item2 });
     const headers2 = await makeAuthHeaders(player_id, secret, body2);
     const res = await app.fetch(
       new Request("http://localhost/api/defend/install", { method: "POST", headers: headers2, body: body2 }),
@@ -130,7 +130,7 @@ describe("POST /api/defend/install", () => {
     await addPostSummary(player_id, "post_e", 1);
     const itemId = await giveItem(player_id, "attack_common");
 
-    const body = JSON.stringify({ post_hex: "post_e", item_id: itemId });
+    const body = JSON.stringify({ post_token: "post_e", item_id: itemId });
     const headers = await makeAuthHeaders(player_id, secret, body);
 
     const res = await app.fetch(
@@ -147,7 +147,7 @@ describe("POST /api/defend/install", () => {
     const { player_id, secret } = await registerPlayer("WrongPost");
     const itemId = await giveItem(player_id, "defense_common");
 
-    const body = JSON.stringify({ post_hex: "nonexistent", item_id: itemId });
+    const body = JSON.stringify({ post_token: "nonexistent", item_id: itemId });
     const headers = await makeAuthHeaders(player_id, secret, body);
 
     const res = await app.fetch(
@@ -179,7 +179,7 @@ describe("POST /api/defend/restore", () => {
       }),
     );
 
-    const body = JSON.stringify({ post_hex: "post_r", provisions_spent: 5 });
+    const body = JSON.stringify({ post_token: "post_r", provisions_spent: 5 });
     const headers = await makeAuthHeaders(player_id, secret, body);
 
     const res = await app.fetch(
@@ -207,7 +207,7 @@ describe("POST /api/defend/restore", () => {
       }),
     );
 
-    const body = JSON.stringify({ post_hex: "post_s", provisions_spent: 100 });
+    const body = JSON.stringify({ post_token: "post_s", provisions_spent: 100 });
     const headers = await makeAuthHeaders(player_id, secret, body);
 
     const res = await app.fetch(
@@ -224,7 +224,7 @@ describe("POST /api/defend/restore", () => {
     const { player_id, secret } = await registerPlayer("FullHP");
     await addPostSummary(player_id, "post_t", 1);
 
-    const body = JSON.stringify({ post_hex: "post_t", provisions_spent: 5 });
+    const body = JSON.stringify({ post_token: "post_t", provisions_spent: 5 });
     const headers = await makeAuthHeaders(player_id, secret, body);
 
     const res = await app.fetch(
@@ -260,7 +260,7 @@ describe("GET /api/player/:id/defense", () => {
     const data = await res.json() as any;
     expect(data.ok).toBe(true);
     expect(data.posts).toHaveLength(2);
-    expect(data.posts[0].post_hex).toBe("post_v1");
+    expect(data.posts[0].post_token).toBe("post_v1");
     expect(data.posts[0].hp).toBe(100); // level 2 = 100 HP
     expect(data.posts[0].max_hp).toBe(100);
     expect(data.posts[0].defense_item).toBeNull();
@@ -288,8 +288,8 @@ describe("POST /api/defend/boost (cap)", () => {
     env = makeEnv();
   });
 
-  async function boost(playerId: string, secret: string, postHex: string, itemIds: string[]) {
-    const body = JSON.stringify({ post_hex: postHex, item_ids: itemIds });
+  async function boost(playerId: string, secret: string, postToken: string, itemIds: string[]) {
+    const body = JSON.stringify({ post_token: postToken, item_ids: itemIds });
     const headers = await makeAuthHeaders(playerId, secret, body);
     return app.fetch(
       new Request("http://localhost/api/defend/boost", { method: "POST", headers, body }),

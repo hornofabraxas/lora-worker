@@ -25,9 +25,9 @@ async function auth(playerId: string, secret: string, body: string): Promise<Rec
   return { "X-Player-ID": playerId, "X-Timestamp": timestamp, "X-Signature": signature, "Content-Type": "application/json" };
 }
 
-async function addPost(playerId: string, postHex: string, level: number): Promise<void> {
+async function addPost(playerId: string, postToken: string, level: number): Promise<void> {
   const raw = (await env.PLAYERS.get(`player:${playerId}`, "json")) as any;
-  raw.post_summaries.push({ post_hex: postHex, level, chartered_at: Math.floor(Date.now() / 1000) - 864000, coarse_cell: "831a00fffffffff" });
+  raw.post_summaries.push({ post_token: postToken, level, chartered_at: Math.floor(Date.now() / 1000) - 864000, coarse_cell: "831a00fffffffff" });
   await env.PLAYERS.put(`player:${playerId}`, JSON.stringify(raw));
 }
 
@@ -103,7 +103,7 @@ describe("GET /api/status (combined defense + raid poll)", () => {
     // Defense half mirrors GET /api/player/:id/defense.
     expect(json.defense.ok).toBe(true);
     expect(json.defense.posts).toHaveLength(1);
-    expect(json.defense.posts[0].post_hex).toBe("post_a");
+    expect(json.defense.posts[0].post_token).toBe("post_a");
     // Raid half mirrors GET /api/raid/mine — idle here.
     expect(json.raid.ok).toBe(true);
     expect(json.raid.active_raid_id).toBeNull();
@@ -118,7 +118,7 @@ describe("GET /api/status (combined defense + raid poll)", () => {
     const item = await giveItem(atk.player_id, "attack_uncommon");
 
     const dispatch = await post("/api/raid/dispatch", atk.player_id, atk.secret, {
-      target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [item],
+      target_player_id: def.player_id, target_post_token: "post_a", item_ids: [item],
     });
     expect(dispatch.status).toBe(200);
 
@@ -129,7 +129,7 @@ describe("GET /api/status (combined defense + raid poll)", () => {
 
     // Defender sees an inbound raid on the targeted post.
     const defStatus = (await (await get("/api/status", def.player_id, def.secret)).json()) as any;
-    const targeted = defStatus.defense.posts.find((p: any) => p.post_hex === "post_a");
+    const targeted = defStatus.defense.posts.find((p: any) => p.post_token === "post_a");
     expect(targeted.incoming_raids.length).toBe(1);
     expect(targeted.incoming_raids[0].eta_seconds).toBeGreaterThan(0);
   });
@@ -142,7 +142,7 @@ describe("GET /api/status (combined defense + raid poll)", () => {
     const item = await giveItem(atk.player_id, "attack_rare"); // razes lvl1
 
     await post("/api/raid/dispatch", atk.player_id, atk.secret, {
-      target_player_id: def.player_id, target_post_hex: "post_a", item_ids: [item],
+      target_player_id: def.player_id, target_post_token: "post_a", item_ids: [item],
     });
     await makeRaidDue(def.player_id);
 

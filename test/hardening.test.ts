@@ -93,11 +93,11 @@ describe("bundle write-time invariants", () => {
     const { player_id, secret } = await registerPlayer();
     const backdated = NOW() - 86400 * 100; // claim 100 days old
     const res = await pushBundle(player_id, secret, {
-      post_summaries: [{ post_hex: "88aa01fffffffff", level: 2, chartered_at: backdated, coarse_cell: "" }],
+      post_summaries: [{ post_token: "88aa01fffffffff", level: 2, chartered_at: backdated, coarse_cell: "" }],
     });
     expect(res.status).toBe(200);
     const player = await inspect(player_id);
-    const post = player.post_summaries.find((p: any) => p.post_hex === "88aa01fffffffff");
+    const post = player.post_summaries.find((p: any) => p.post_token === "88aa01fffffffff");
     // Clamped up to ~now, not the backdated value.
     expect(post.chartered_at).toBeGreaterThan(NOW() - 300);
   });
@@ -105,7 +105,7 @@ describe("bundle write-time invariants", () => {
   it("clamps the stored post count to the hard ceiling", async () => {
     const { player_id, secret } = await registerPlayer();
     const posts = Array.from({ length: 9 }, (_, i) => ({
-      post_hex: `88aa0${i}fffffffff`,
+      post_token: `88aa0${i}fffffffff`,
       level: 1,
       chartered_at: NOW() - i,
       coarse_cell: "",
@@ -119,10 +119,10 @@ describe("bundle write-time invariants", () => {
     const { player_id, secret } = await registerPlayer();
     const farFuture = NOW() + 86400 * 100;
     await pushBundle(player_id, secret, {
-      post_summaries: [{ post_hex: "88aa02fffffffff", level: 1, chartered_at: NOW(), coarse_cell: "", dormant_until: farFuture }],
+      post_summaries: [{ post_token: "88aa02fffffffff", level: 1, chartered_at: NOW(), coarse_cell: "", dormant_until: farFuture }],
     });
     const player = await inspect(player_id);
-    const post = player.post_summaries.find((p: any) => p.post_hex === "88aa02fffffffff");
+    const post = player.post_summaries.find((p: any) => p.post_token === "88aa02fffffffff");
     expect(post.dormant_until).toBeLessThanOrEqual(NOW() + 86400 * 31 + 1);
     expect(post.dormant_until).toBeLessThan(farFuture);
   });
@@ -286,10 +286,10 @@ describe("admin flags report", () => {
       coarse_cells: ["8329a0fffffffff"],
       posts: [
         // Climbed 1 -> max under our own observation: the real signal.
-        { post_hex: "88bb01fffffffff", level: 5, chartered_at: NOW(), first_level: 1 },
-        { post_hex: "88bb02fffffffff", level: 1, chartered_at: NOW() - 86400 * 30 },
-        { post_hex: "88bb03fffffffff", level: 1, chartered_at: NOW() - 86400 * 30 },
-        { post_hex: "88bb04fffffffff", level: 1, chartered_at: NOW() - 86400 * 30 }, // 4 posts > game max 3
+        { post_token: "88bb01fffffffff", level: 5, chartered_at: NOW(), first_level: 1 },
+        { post_token: "88bb02fffffffff", level: 1, chartered_at: NOW() - 86400 * 30 },
+        { post_token: "88bb03fffffffff", level: 1, chartered_at: NOW() - 86400 * 30 },
+        { post_token: "88bb04fffffffff", level: 1, chartered_at: NOW() - 86400 * 30 }, // 4 posts > game max 3
       ],
     };
     await app.fetch(
@@ -331,11 +331,11 @@ describe("leaderboard hides distance", () => {
   it("never exposes proximity on the leaderboard — it is scout-only now", async () => {
     await seedPlayer({
       display_name: "A", coarse_centroid: { lat: 0, lng: 0 },
-      posts: [{ post_hex: "88cc01fffffffff", level: 1 }],
+      posts: [{ post_token: "88cc01fffffffff", level: 1 }],
     });
     await seedPlayer({
       display_name: "B", coarse_centroid: { lat: 51.5, lng: -0.1 },
-      posts: [{ post_hex: "88cc02fffffffff", level: 1 }],
+      posts: [{ post_token: "88cc02fffffffff", level: 1 }],
     });
 
     const viewer = await registerViewer(env);

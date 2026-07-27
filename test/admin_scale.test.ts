@@ -59,7 +59,7 @@ async function seedRoster(count: number, opts: { flagged?: boolean } = {}): Prom
       registered_at: now,
       coarse_cells: ["8329a0fffffffff"],
       items: [],
-      post_summaries: [{ post_hex: hex, level: 5, chartered_at: now, coarse_cell: "", name: `Post${i}` }],
+      post_summaries: [{ post_token: hex, level: 5, chartered_at: now, coarse_cell: "", name: `Post${i}` }],
       secret_hash: "x".repeat(64),
       post_first_seen: { [hex]: now },
       post_first_level: { [hex]: opts.flagged ? 1 : 5 },
@@ -201,7 +201,7 @@ describe("names filtering happens on the server", () => {
 
     expect(data.players).toHaveLength(1);
     expect(data.players[0].include_player).toBe(false);
-    expect(data.players[0].posts[0].post_hex).toBe("88cc05fffffffff");
+    expect(data.players[0].posts[0].post_token).toBe("88cc05fffffffff");
   });
 
   it("narrows to players or posts by type", async () => {
