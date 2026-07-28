@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "./types.js";
+import { clientVersionMiddleware } from "./middleware/version.js";
 import register from "./routes/register.js";
 import bundle from "./routes/bundle.js";
 import leaderboard from "./routes/leaderboard.js";
@@ -16,6 +17,8 @@ import { rebuildLeaderboardCache } from "./logic/leaderboard.js";
 import { KvStore, kvAdapter, consolidatedStub } from "./kv/do_store.js";
 
 const app = new Hono<{ Bindings: Env }>();
+
+app.use("*", clientVersionMiddleware);
 
 app.get("/", (c) => c.json({ name: "lora-worker", version: "0.1.0" }));
 

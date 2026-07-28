@@ -59,6 +59,10 @@ game server ──signed bundle──> Worker ──> KvStore Durable Object (SQ
 - **Admin:** handlers defined once in `src/routes/admin.ts`, mounted twice — `/api/admin/*` behind a
   shared secret (machine) and `/admin/api/*` behind Cloudflare Access (browser). An Access session
   deliberately cannot unlock the machine path; that's CSRF defence in depth.
+- **Version gate:** a global middleware (`src/middleware/version.ts`) rejects a game server whose
+  `X-Client-Version` is below `MIN_CLIENT_VERSION` with `426 Upgrade Required`, before auth runs.
+  Off by default; the floor is only raised alongside a breaking wire/schema change. Skips
+  `/api/admin/*` and `/admin/*` — those are operator calls, never game-client traffic.
 
 ### Key routes
 
@@ -87,6 +91,7 @@ Configure in `wrangler.toml` (`[vars]`) and via `wrangler secret put`:
 | `ADMIN_SECRET` | secret | Guards `/api/admin/*` |
 | `ACCESS_AUD`, `ACCESS_TEAM_DOMAIN` | var | Cloudflare Access application audience + team domain |
 | `ADMIN_EMAILS` | secret | Comma-separated operator allow-list, a second fence behind Access. A secret rather than a var only to keep personal addresses out of a public repo — it grants nothing on its own |
+| `MIN_CLIENT_VERSION` | var | Floor for a game server's reported `X-Client-Version` (see `middleware/version.ts`). `"0.0.0"` or unset = no enforcement. Raise it only alongside a breaking wire/schema change, in the commit that makes the change, so the floor and the reason are reviewed together |
 
 > **If you deploy your own:** set `REGISTER_SECRET`, or anyone can register. Every registered player
 > is a leaderboard entry and a valid raid actor, so open registration is a sybil surface. Replace

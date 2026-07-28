@@ -24,6 +24,11 @@ crons = ["0 */6 * * *"]
 [vars]
 ACCESS_AUD = "a416f57695a708e11eed20e991aedda5c19dfd9b988bc18f4c43d2b97cd64893"
 ACCESS_TEAM_DOMAIN = "thebeacons.cloudflareaccess.com"
+# Floor for the game server's reported X-Client-Version (middleware/version.ts).
+# "0.0.0" means no enforcement — every version compares >= it. Raise this only
+# alongside a breaking wire/schema change, in the same commit as that change,
+# so the floor and the reason for it are reviewed together.
+MIN_CLIENT_VERSION = "0.0.0"
 
 # Storage runs on SQLite-backed Durable Objects (free tier: 100k writes/day vs
 # KV's 1k). Consolidated 2026-07-22: every logical namespace now shares ONE

@@ -25,6 +25,13 @@ export interface Env {
   ACCESS_TEAM_DOMAIN?: string;
   /** Optional comma-separated email allow-list, a second fence behind Access. */
   ADMIN_EMAILS?: string;
+  /**
+   * Floor below which a game server's reported X-Client-Version is rejected
+   * (426) on every non-admin route. Unset or "0.0.0" (the wrangler.toml
+   * default) means no enforcement. Raise this only alongside a breaking wire
+   * change — see middleware/version.ts.
+   */
+  MIN_CLIENT_VERSION?: string;
 }
 
 export interface PlayerProfile {
