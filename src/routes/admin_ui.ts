@@ -111,6 +111,13 @@ const PAGE = `<!DOCTYPE html>
   details.help strong { color: var(--ink); }
   hr { border: 0; border-top: 1px solid var(--line); margin: 10px 0; }
   pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; color: var(--dim); margin: 0; }
+  .meter-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .meter-head .pct { font-size: 20px; font-weight: 600; }
+  .meter { height: 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+  .meter > span { display: block; height: 100%; background: var(--ok); transition: width .3s; }
+  .meter.warn > span { background: var(--warn); }
+  .meter.bad > span { background: var(--bad); }
+  .meter-foot { color: var(--dim); font-size: 12.5px; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -120,6 +127,7 @@ const PAGE = `<!DOCTYPE html>
     <button data-tab="flags" aria-selected="true">Flags</button>
     <button data-tab="names" aria-selected="false">Names</button>
     <button data-tab="player" aria-selected="false">Player</button>
+    <button data-tab="usage" aria-selected="false">Usage</button>
   </nav>
 </header>
 <main>
@@ -157,6 +165,9 @@ const PAGE = `<!DOCTYPE html>
       </div>
     </div>
     <div id="player-out"></div>
+  </section>
+  <section id="tab-usage" hidden>
+    <div id="usage-out"></div>
   </section>
 </main>
 <div id="msg" role="status" aria-live="polite"></div>
@@ -196,7 +207,7 @@ const PAGE = `<!DOCTYPE html>
       Array.prototype.forEach.call(document.querySelectorAll("nav button"), function (o) {
         o.setAttribute("aria-selected", String(o === b));
       });
-      ["flags", "names", "player"].forEach(function (t) {
+      ["flags", "names", "player", "usage"].forEach(function (t) {
         document.getElementById("tab-" + t).hidden = t !== tab;
       });
       msg.innerHTML = "";
@@ -455,6 +466,39 @@ const PAGE = `<!DOCTYPE html>
         .then(function () { outEl.innerHTML = ""; note("Player deleted."); }).catch(fail);
     }
   });
+
+  // --- usage --------------------------------------------------------------
+  var usageEl = document.getElementById("usage-out");
+  function meter(title, m, foot) {
+    var pct = m.fraction * 100;
+    var cls = pct >= 90 ? "bad" : pct >= 70 ? "warn" : "";
+    return '<div class="card">' +
+      '<div class="meter-head"><h2>' + esc(title) + '</h2>' +
+        '<span class="pct" style="color:var(--' + (cls || "ok") + ')">' + pct.toFixed(1) + "%</span></div>" +
+      '<div class="meter ' + cls + '"><span style="width:' + Math.min(100, pct).toFixed(1) + '%"></span></div>' +
+      '<div class="meter-foot">' + esc(m.requests.toLocaleString()) + " of " +
+        esc(m.limit.toLocaleString()) + " requests today" + (foot ? " · " + esc(foot) : "") + "</div>" +
+      "</div>";
+  }
+  function renderUsage(d) {
+    if (!d.configured) {
+      usageEl.innerHTML = '<div class="card"><h2>Not configured</h2>' +
+        '<p class="muted">Live usage needs a read-only Cloudflare API token. Create one with ' +
+        '<strong>Account Analytics: Read</strong>, then set both secrets and redeploy:</p>' +
+        '<pre>wrangler secret put CF_ACCOUNT_ID\nwrangler secret put CF_ANALYTICS_TOKEN</pre></div>';
+      return;
+    }
+    usageEl.innerHTML =
+      meter("Worker requests", d.workers, "free-tier daily cap") +
+      meter("Durable Object requests", d.durableObjects,
+        "the binding constraint · ~" + esc(d.freeTierPlayerCeiling) + " active players on free tier") +
+      '<p class="muted">Since ' + esc(new Date(d.since).toUTCString()) + " (UTC day). " +
+        "Percentages are of the free-tier daily ceiling.</p>";
+  }
+  loaders.usage = function () {
+    usageEl.innerHTML = '<div class="empty">Loading…</div>';
+    api("/usage").then(renderUsage).catch(function (e) { usageEl.innerHTML = ""; fail(e); });
+  };
 
   loaders.flags();
 })();

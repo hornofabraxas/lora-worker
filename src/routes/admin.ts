@@ -19,6 +19,7 @@ import {
 import type { ModerationOverrides } from "../logic/moderation.js";
 import { totalRenownPerDay } from "../logic/renown.js";
 import { reasonsFor, isDismissed, getFlagAcks, putFlagAcks, parseFlagAcks, FLAG_ACK_KEY } from "../logic/flags.js";
+import { fetchUsage } from "../logic/usage.js";
 
 // Every admin report is capped at this many rows. The cap is about the operator
 // and the phone holding the page, not about storage: a report nobody can read to
@@ -59,6 +60,9 @@ interface SeedPostInput {
   level: number;
   chartered_at?: number;
   dormant_until?: number;
+  /** Custom outpost name echoed on the leaderboard/scout/raid surfaces. Seeds
+   * only — real players push theirs through the bundle route (PostSummary.name). */
+  name?: string;
   defense?: Partial<DefenseValues>;
   /**
    * Level the Worker "first saw" this post at. Defaults to the post's current
@@ -105,6 +109,7 @@ core.post("/seed-player", async (c) => {
     post_token: p.post_token,
     level: p.level,
     chartered_at: p.chartered_at ?? now - 86400 * 20,
+    ...(p.name ? { name: p.name } : {}),
     ...(p.dormant_until ? { dormant_until: p.dormant_until } : {}),
   }));
 
@@ -560,6 +565,18 @@ core.delete("/censor", async (c) => {
   }
   await putOverrides(c.env, overrides);
   return c.json({ ok: true, overrides });
+});
+
+// Today's Cloudflare usage (Worker + Durable Object requests) as a percentage of
+// the free-tier daily ceiling — the capacity gauge for the DO-request budget the
+// whole architecture is tuned around. Read-only; degrades to configured:false
+// when the analytics secrets are unset (see logic/usage.ts).
+core.get("/usage", async (c) => {
+  try {
+    return c.json(await fetchUsage(c.env));
+  } catch (e) {
+    return c.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 502);
+  }
 });
 
 // ---------------------------------------------------------------------------

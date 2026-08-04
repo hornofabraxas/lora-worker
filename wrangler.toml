@@ -21,6 +21,18 @@ crons = ["0 */6 * * *"]
 # The Worker reads c.env.ADMIN_EMAILS identically whether it comes from a var or
 # a secret, so nothing in the code changes. Leaving it unset is also valid: the
 # Access application's own policy is then the only gate (see access.ts).
+#
+# The admin Usage tab (GET /admin/api/usage, src/logic/usage.ts) reads today's
+# Worker + Durable Object request counts from the Cloudflare GraphQL Analytics
+# API. It needs the account id and a read-only token scoped to
+# "Account Analytics: Read" — set both as secrets (the token is read-only but is
+# still a credential, so it does not belong in this public file):
+#
+#   npx wrangler secret put CF_ACCOUNT_ID       # the Cloudflare account id
+#   npx wrangler secret put CF_ANALYTICS_TOKEN  # token: Account Analytics -> Read
+#
+# Leaving either unset makes the Usage tab show "not configured" instead of
+# failing — nothing else depends on them.
 [vars]
 ACCESS_AUD = "a416f57695a708e11eed20e991aedda5c19dfd9b988bc18f4c43d2b97cd64893"
 ACCESS_TEAM_DOMAIN = "thebeacons.cloudflareaccess.com"

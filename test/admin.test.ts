@@ -143,3 +143,43 @@ describe("admin trim-items (legacy stockpile purge)", () => {
     expect((await app.fetch(trimReq({ player_id: "x", keep: {} }, null), env)).status).toBe(403);
   });
 });
+
+describe("admin seed custom outpost names (task 16)", () => {
+  it("threads a per-post custom name through to the leaderboard", async () => {
+    const body = {
+      display_name: "Willowmere Watch",
+      active_title: "Warlord",
+      coarse_centroid: { lat: 40.7, lng: -74.0 },
+      posts: [
+        { post_token: "88bbbb0001fffff", level: 3, name: "Fort Kickass" },
+        { post_token: "88bbbb0003fffff", level: 4 },
+      ],
+    };
+    const seeded = await (await app.fetch(seedReq(body), env)).json() as { player_id: string };
+
+    const viewer = await registerViewer(env);
+    const lb = await getLeaderboardAs<{
+      players: { player_id: string; posts: { post_token: string; name?: string }[] }[];
+    }>(env, viewer);
+    const row = lb.players.find((p) => p.player_id === seeded.player_id);
+    const named = row?.posts.find((p) => p.post_token === "88bbbb0001fffff");
+    expect(named?.name).toBe("Fort Kickass");
+  });
+});
+
+describe("admin usage endpoint (task 12)", () => {
+  it("reports not-configured when analytics secrets are unset", async () => {
+    const res = await app.fetch(new Request("http://localhost/api/admin/usage", {
+      headers: { "x-admin-secret": ADMIN },
+    }), env);
+    expect(res.status).toBe(200);
+    const d = await res.json() as { ok: boolean; configured: boolean };
+    expect(d.ok).toBe(true);
+    expect(d.configured).toBe(false);
+  });
+
+  it("requires the admin secret", async () => {
+    const res = await app.fetch(new Request("http://localhost/api/admin/usage"), env);
+    expect(res.status).toBe(403);
+  });
+});

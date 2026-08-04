@@ -32,6 +32,17 @@ export interface Env {
    * change — see middleware/version.ts.
    */
   MIN_CLIENT_VERSION?: string;
+  /**
+   * Cloudflare account id + a scoped API token ("Account Analytics: Read"),
+   * used only by the admin Usage tab (GET /admin/api/usage) to read today's
+   * Worker + Durable Object request counts from the GraphQL Analytics API.
+   * Both are set as secrets (`wrangler secret put CF_ACCOUNT_ID` /
+   * `CF_ANALYTICS_TOKEN`); unset makes the Usage tab report "not configured"
+   * rather than failing. The token is read-only analytics — it cannot change
+   * anything — but it is still a secret, so it lives here, not in wrangler.toml.
+   */
+  CF_ACCOUNT_ID?: string;
+  CF_ANALYTICS_TOKEN?: string;
 }
 
 export interface PlayerProfile {
