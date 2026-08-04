@@ -140,6 +140,6 @@ See [SECURITY.md](SECURITY.md). Report privately — never in a public issue.
 
 ## License
 
-[MIT](LICENSE) © 2026 Justin Walls.
+[MIT](LICENSE) © 2026 hornofabraxas.
 
 Built with [Hono](https://hono.dev) (MIT). Not affiliated with Cloudflare, Inc.
