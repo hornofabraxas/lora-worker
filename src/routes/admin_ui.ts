@@ -485,7 +485,7 @@ const PAGE = `<!DOCTYPE html>
       usageEl.innerHTML = '<div class="card"><h2>Not configured</h2>' +
         '<p class="muted">Live usage needs a read-only Cloudflare API token. Create one with ' +
         '<strong>Account Analytics: Read</strong>, then set both secrets and redeploy:</p>' +
-        '<pre>wrangler secret put CF_ACCOUNT_ID\nwrangler secret put CF_ANALYTICS_TOKEN</pre></div>';
+        '<pre>wrangler secret put CF_ACCOUNT_ID\\nwrangler secret put CF_ANALYTICS_TOKEN</pre></div>';
       return;
     }
     usageEl.innerHTML =
