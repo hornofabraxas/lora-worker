@@ -30,7 +30,8 @@ location cannot be reconstructed from it:
 
 - Survey Posts are identified by **opaque random tokens**, never their real H3 hex IDs (a res-8 hex
   decodes to a ~460 m area).
-- The only geography stored is a **~11 km-rounded centroid**, used for raid travel time.
+- The only geography stored is a **centroid snapped to a ~50 mile grid**, used for raid travel time
+  (true home is somewhere inside that ~50-mile cell).
 - Scout reports fuzz inter-player distance to the **nearest 50 miles**.
 - Player IDs are **random 128-bit values**, unrelated to hardware or identity.
 - **The application logs no IP addresses** and collects no analytics.

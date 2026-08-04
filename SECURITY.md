@@ -21,7 +21,7 @@ The things most worth your attention:
 
 - **Location de-anonymisation.** Any way to recover a player's real coordinates, real H3 hex IDs, or
   precise inter-player distance from what this service stores or returns. Post identifiers are
-  supposed to be opaque tokens; centroids ~11 km; scout distances fuzzed to 50 miles. **Breaking any
+  supposed to be opaque tokens; centroids snapped to a ~50 mile grid; scout distances fuzzed to 50 miles. **Breaking any
   of those is the most serious class of bug in this project.**
 - **Authentication bypass.** Forging or replaying the HMAC signature, acting as another player, or
   defeating the ±300 s timestamp window.
