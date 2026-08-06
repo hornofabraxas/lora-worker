@@ -93,6 +93,9 @@ Configure in `wrangler.toml` (`[vars]`) and via `wrangler secret put`:
 | `ACCESS_AUD`, `ACCESS_TEAM_DOMAIN` | var | Cloudflare Access application audience + team domain |
 | `ADMIN_EMAILS` | secret | Comma-separated operator allow-list, a second fence behind Access. A secret rather than a var only to keep personal addresses out of a public repo — it grants nothing on its own |
 | `MIN_CLIENT_VERSION` | var | Floor for a game server's reported `X-Client-Version` (see `middleware/version.ts`). `"0.0.0"` or unset = no enforcement. Raise it only alongside a breaking wire/schema change, in the commit that makes the change, so the floor and the reason are reviewed together |
+| `MAX_TOTAL_PLAYERS` | var | Hard lifetime roster ceiling; registration closes (403) once reached. Unset = no cap |
+| `REGISTER_DAILY_LIMIT` | var | Global new players allowed per UTC day (429 over). Unset = no cap |
+| `REGISTER_IP_DAILY_LIMIT` | var | New players per `CF-Connecting-IP` per UTC day (429 over); skipped when the header is absent. Unset = no cap |
 
 > **If you deploy your own:** set `REGISTER_SECRET`, or anyone can register. Every registered player
 > is a leaderboard entry and a valid raid actor, so open registration is a sybil surface. Replace
@@ -101,6 +104,46 @@ Configure in `wrangler.toml` (`[vars]`) and via `wrangler secret put`:
 >
 > **Access gotcha:** an Access application with zero policies matches nobody and silently never
 > sends the OTP. Always add an Allow policy with an Emails include rule.
+
+### Abuse & cost controls
+
+Two independent layers keep a forked/modified client — or a leaked invite code — from
+running up Cloudflare usage. They're complementary: the app caps bound *player creation* and
+per-player writes; the edge rule bounds *raw request volume* before it costs a Worker
+invocation.
+
+**1. Application caps (this repo).** The invite code (`REGISTER_SECRET`) is a *shared* secret —
+every player's client config holds it — so it stops strangers but not a holder or a leak minting
+players in a loop. `routes/register.ts` adds three opt-in caps (all off when unset, like
+`REGISTER_SECRET`), keyed on server-time UTC date and committed atomically with the player write.
+The reference deployment runs (in `wrangler.toml [vars]`):
+
+```toml
+MAX_TOTAL_PLAYERS = "500"        # hard lifetime ceiling — a leaked invite can't exceed it
+REGISTER_DAILY_LIMIT = "100"     # absorbs a launch-day surge, still caps a leak per day
+REGISTER_IP_DAILY_LIMIT = "3"    # one base camp per home; covers a household, blocks a loop
+```
+
+Per-bundle writes are already capped independently in `routes/bundle.ts` (6 bundles/rolling
+hour/player, 50 surveys/day), and the Worker recomputes drops and clamps every leaderboard input
+server-side — a modified *local* client can't cheat rankings or mint rewards.
+
+**2. Edge rate limiting (Cloudflare dashboard — not in this repo).**
+Security → WAF → Rate limiting rules, on the `nukeradio.net` zone:
+
+- **Match:** `(http.host eq "lora.nukeradio.net" and starts_with(http.request.uri.path, "/api/"))`
+- **Characteristic:** IP
+- **Rate:** 50 requests / 10 seconds
+- **Action:** **Block** for 10 seconds
+
+Use **Block, not a Challenge** — the clients are headless game servers and can't solve one. The
+free plan fixes the period and block duration at 10s and allows a single rule; that one rule covers
+`/api/register` too (it's under `/api/`), backed by `REGISTER_IP_DAILY_LIMIT`. 50/10s is generous
+headroom for a real client (multiplayer pages fan out a handful of calls) while stopping a flood
+dead. On the free plan the ultimate backstop is the ~100k requests/day cutoff — the Worker returns
+429s for the rest of the UTC day and **cannot be billed**; runaway *cost* is only possible on
+Workers Paid, where a billing alert is the safety net. Adjust the rate rule if the front-end's
+per-page call fan-out grows.
 
 ## Development
 
