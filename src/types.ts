@@ -16,6 +16,21 @@ export interface Env {
    */
   REGISTER_SECRET?: string;
   /**
+   * Registration roster/rate caps. All opt-in — unset means no enforcement
+   * (matching REGISTER_SECRET), so tests and private/dev use are unaffected.
+   * They bound *player creation* so a leaked invite code (every player holds
+   * one) can't mint players without limit; raw request-rate is bounded at the
+   * Cloudflare edge, not here. See routes/register.ts.
+   *   MAX_TOTAL_PLAYERS      — hard lifetime roster ceiling; registration closes
+   *                            (403) once the roster reaches it.
+   *   REGISTER_DAILY_LIMIT   — global registrations allowed per UTC day (429).
+   *   REGISTER_IP_DAILY_LIMIT— registrations per CF-Connecting-IP per UTC day
+   *                            (429). Skipped when the header is absent.
+   */
+  MAX_TOTAL_PLAYERS?: string;
+  REGISTER_DAILY_LIMIT?: string;
+  REGISTER_IP_DAILY_LIMIT?: string;
+  /**
    * Cloudflare Access application audience (AUD) tag and Zero Trust team
    * domain, guarding the browser-facing /admin surface. Both must be set for an
    * Access identity to be accepted — unset means /admin is reachable only with

@@ -42,6 +42,19 @@ ACCESS_TEAM_DOMAIN = "thebeacons.cloudflareaccess.com"
 # so the floor and the reason for it are reviewed together.
 MIN_CLIENT_VERSION = "0.0.0"
 
+# Registration caps (routes/register.ts). All opt-in; these bound player
+# *creation* so a leaked invite code — every player's client config holds one —
+# can't mint players without limit. Raw request volume is bounded separately at
+# the Cloudflare edge (WAF rate-limiting rule on /api/*), not here.
+#   MAX_TOTAL_PLAYERS       — hard lifetime roster ceiling; registration closes
+#                             (403) once the roster reaches it.
+#   REGISTER_DAILY_LIMIT    — global new players per UTC day (429 over).
+#   REGISTER_IP_DAILY_LIMIT — new players per CF-Connecting-IP per UTC day (429);
+#                             skipped when the header is absent (local/dev).
+MAX_TOTAL_PLAYERS = "500"
+REGISTER_DAILY_LIMIT = "100"
+REGISTER_IP_DAILY_LIMIT = "3"
+
 # Storage runs on SQLite-backed Durable Objects (free tier: 100k writes/day vs
 # KV's 1k). Consolidated 2026-07-22: every logical namespace now shares ONE
 # KvStore instance (keys prefixed per namespace), so a poll/bundle/raid can read

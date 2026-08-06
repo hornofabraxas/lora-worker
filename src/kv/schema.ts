@@ -47,6 +47,17 @@ export function rateLimitKey(
   return `ratelimit:${playerId}:bundles:${hour}`;
 }
 
+// Registration counters, bucketed by UTC date (YYYY-MM-DD). Server-time keyed —
+// registration carries no trusted client timestamp — so the bucket can't be
+// walked forward. See routes/register.ts.
+export function registerDailyKey(date: string): string {
+  return `ratelimit:register:global:${date}`;
+}
+
+export function registerIpDailyKey(ip: string, date: string): string {
+  return `ratelimit:register:ip:${ip}:${date}`;
+}
+
 export function defenseKey(playerId: string, postToken: string): string {
   return `defense:${playerId}:${postToken}`;
 }
