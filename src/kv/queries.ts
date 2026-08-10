@@ -160,6 +160,28 @@ export function defaultDefense(postLevel: number, now: number): DefenseValues {
   };
 }
 
+/**
+ * Raise a post's HP pool to match its current level after an upgrade. Post HP
+ * scales with level (POST_MAX_HP), but a defense row materializes once at the
+ * level the post was when first defended and is never rewritten upward — only
+ * raid *level-loss* (raid resolution) lowers it. So a post levelled up after its
+ * row exists keeps its old, too-small pool. This reconciles that.
+ *
+ * Only ever *increases* (guarded by target > max_hp), and adds the delta to both
+ * current and max HP so a full post stays full and a damaged one keeps its
+ * missing HP. Returns true if it changed the row. Callers must ensure this isn't
+ * run while a raid knockdown for the post is still pending delivery (the client
+ * hasn't yet lowered its asserted level) — see routes/bundle.ts.
+ */
+export function reconcileDefenseLevel(defense: DefenseValues, postLevel: number): boolean {
+  const target = POST_MAX_HP[postLevel] ?? POST_MAX_HP[1];
+  if (target <= defense.max_hp) return false;
+  const delta = target - defense.max_hp;
+  defense.max_hp = target;
+  defense.hp = Math.min(target, defense.hp + delta);
+  return true;
+}
+
 export async function getOrCreateDefense(env: Env, playerId: string, postToken: string, postLevel: number = 1): Promise<DefenseValues> {
   const existing = await getDefense(env, playerId, postToken);
   if (existing) return existing;

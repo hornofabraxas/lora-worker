@@ -4,11 +4,12 @@ import { MAX_POST_LEVEL, KNOWN_TITLES } from "../types.js";
 import { precheckAuthHeaders, verifyPlayerSignature } from "../middleware/auth.js";
 import {
   playerKey, playerLastBundleKey, notificationsKey,
-  razeTombstoneKey, razeTombstonePrefix, rateLimitKey, PLAYER_INDEX_KEY, NS,
+  razeTombstoneKey, razeTombstonePrefix, defenseKey, rateLimitKey, PLAYER_INDEX_KEY, NS,
 } from "../kv/schema.js";
 import { snapshotRead, MutationBuffer } from "../kv/composite.js";
 import { computeDrops } from "../logic/drops.js";
-import type { ItemType, ItemRecord } from "../types.js";
+import { reconcileDefenseLevel } from "../kv/queries.js";
+import type { ItemType, ItemRecord, DefenseValues } from "../types.js";
 
 const LEGACY_ITEM_MAP: Record<string, ItemType> = {
   reinforce: "defense_common",
@@ -72,6 +73,9 @@ const RATE_LIMIT_TTL = 7200; // 2h — covers the rolling hour bucket plus skew
 // A player's raze tombstones are bounded by their post count over the tombstone
 // TTL; this caps the per-bundle tombstone scan with generous headroom.
 const TOMBSTONE_SCAN_LIMIT = 64;
+// A player holds at most MAX_POSTS defense rows; 64 is generous headroom and
+// rides the same snapshot (adding a range costs no extra RPC).
+const DEFENSE_SCAN_LIMIT = 64;
 
 const app = new Hono<{ Bindings: Env; Variables: { playerId: string } }>();
 
@@ -143,6 +147,7 @@ app.post("/api/bundle", async (c) => {
     ],
     [
       { ns: NS.DEFENSE, key: razeTombstonePrefix(playerId), limit: TOMBSTONE_SCAN_LIMIT },
+      { ns: NS.DEFENSE, key: defenseKey(playerId, ""), limit: DEFENSE_SCAN_LIMIT },
     ],
   );
   const buf = new MutationBuffer();
@@ -296,6 +301,28 @@ app.post("/api/bundle", async (c) => {
     const firstSeen = { ...(player.post_first_seen ?? {}) };
     const firstLevel = { ...(player.post_first_level ?? {}) };
     const priorByHex = new Map(player.post_summaries.map((p) => [p.post_token, p]));
+
+    // Post HP scales with level (POST_MAX_HP), but a defense row is written once
+    // at its creation level and only ever lowered by a raid — so a post levelled
+    // up after its row exists keeps a too-small pool. Raise it to match below.
+    // defByToken indexes this player's defense rows from the same snapshot.
+    // raidPendingTokens are posts with a raid knockdown still awaiting delivery
+    // (the client hasn't lowered its asserted level yet); skip those, or we'd
+    // hand back HP the raid just removed.
+    const defPrefix = defenseKey(playerId, "");
+    const defByToken = new Map<string, DefenseValues>();
+    for (const row of snap.ranges[1]) {
+      try {
+        defByToken.set(row.key.slice(defPrefix.length), JSON.parse(row.value) as DefenseValues);
+      } catch { /* skip an unparseable row */ }
+    }
+    const raidPendingTokens = new Set<string>();
+    for (const n of (snap.exact[3] ? (JSON.parse(snap.exact[3]) as Notification[]) : [])) {
+      if ((n.type === "raid_damaged" || n.type === "raid_razed") && typeof n.data?.post_token === "string") {
+        raidPendingTokens.add(n.data.post_token as string);
+      }
+    }
+
     const validated: PostSummary[] = [];
     for (const p of body.post_summaries) {
       if (tombstoned.has(p.post_token)) continue;
@@ -305,6 +332,14 @@ app.post("/api/bundle", async (c) => {
         firstSeen[p.post_token] = seen;
       }
       const level = Math.min(MAX_POST_LEVEL, Math.max(1, Math.floor(p.level ?? 1)));
+      // Reconcile this post's defensive HP pool up to its current level, unless a
+      // raid knockdown for it is still pending delivery (see above).
+      if (!raidPendingTokens.has(p.post_token)) {
+        const def = defByToken.get(p.post_token);
+        if (def && reconcileDefenseLevel(def, level)) {
+          buf.put(NS.DEFENSE, defenseKey(playerId, p.post_token), JSON.stringify(def));
+        }
+      }
       // Record the level we first saw, once, so the admin flags report can tell
       // growth it witnessed from a post that simply arrived established.
       if (firstLevel[p.post_token] === undefined) {
