@@ -3,8 +3,8 @@
 // to zero across RUIN_RAMP_DAYS. Renown fades on the same curve as provisions and
 // freezes entirely while a post is dormant under a ward. Keep these constants and
 // the factor math in sync with the Python side.
-export const RUIN_GRACE_DAYS = 10;
-export const RUIN_RAMP_DAYS = 7;
+export const RUIN_GRACE_DAYS = 6;
+export const RUIN_RAMP_DAYS = 4;
 
 export interface RuinPost {
   chartered_at: number;
