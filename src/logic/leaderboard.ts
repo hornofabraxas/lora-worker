@@ -1,6 +1,6 @@
 import type { Env, PlayerProfile } from "../types.js";
 import { totalRenown, totalRenownPerDay } from "./renown.js";
-import { getPlayerIndex, getPlayersByIds } from "../kv/queries.js";
+import { getPlayerIndex, getPlayersByIds, purgePlayerData } from "../kv/queries.js";
 import { LEADERBOARD_CACHE_KEY } from "../kv/schema.js";
 
 // How long a snapshot may be served before a read rebuilds it. Gameplay writes
@@ -62,6 +62,48 @@ export async function rebuildLeaderboardCache(
   };
   await env.META.put(LEADERBOARD_CACHE_KEY, JSON.stringify(cache));
   return cache;
+}
+
+// How many top ranks must be free of NPCs before the whole garrison retires.
+// Matches the seeded garrison size: once real players hold this entire band, the
+// scaffolding has done its job.
+export const NPC_RETIRE_TOP_N = 8;
+
+/**
+ * Retire the seeded NPC garrison once real players own the top band.
+ *
+ * The garrison (players seeded with `npc: true`) exists so the first registrants
+ * must earn their standing instead of inheriting an empty #1. It removes itself:
+ * the first time NO npc sits in the top `NPC_RETIRE_TOP_N` by renown, every npc
+ * is purged in a single pass — all-or-nothing, so the board never shows a
+ * half-emptied garrison. While even one npc still holds a top slot, the whole
+ * garrison stays. Returns the number of NPCs retired (0 if none, or if the band
+ * still contains one).
+ *
+ * Runs from the 6h cron, off the hot path — `purgePlayerData` is scan-heavy by
+ * design, and this fires at most once in the garrison's life (after which there
+ * are no NPCs left to find).
+ */
+export async function retireGarrisonIfClear(
+  env: Env,
+  now: number = Math.floor(Date.now() / 1000),
+): Promise<number> {
+  const ids = await getPlayerIndex(env);
+  const players = await getPlayersByIds(env, ids);
+  const npcIds = players.filter((p) => p.npc).map((p) => p.player_id);
+  if (npcIds.length === 0) return 0;
+
+  const ranked = players
+    .map((p) => ({ npc: !!p.npc, renown: totalRenown(p.post_summaries, now) }))
+    .sort((a, b) => b.renown - a.renown);
+
+  // A smaller-than-band field always still contains the NPCs, so this correctly
+  // keeps them while the community is tiny.
+  if (ranked.slice(0, NPC_RETIRE_TOP_N).some((r) => r.npc)) return 0;
+
+  for (const id of npcIds) await purgePlayerData(env, id);
+  await rebuildLeaderboardCache(env, now);
+  return npcIds.length;
 }
 
 /** Serve the snapshot, rebuilding only if it's missing or past its stale window. */

@@ -1,0 +1,168 @@
+[
+  {
+    "display_name": "Almara Vane",
+    "coarse_centroid": {
+      "lat": 39.74,
+      "lng": -104.99
+    },
+    "registered_at": 1782331398,
+    "posts": [
+      {
+        "post_token": "ce3c09829bad2ea46df5d97a3a46e240",
+        "level": 5,
+        "chartered_at": 1782763398,
+        "name": "Almara's Waypost"
+      },
+      {
+        "post_token": "e48c9b88faf7f3037b03b21b169150f5",
+        "level": 5,
+        "chartered_at": 1783195398,
+        "name": "Almara's Waypost"
+      },
+      {
+        "post_token": "617b8818f767c484d8bc2cda0e66763d",
+        "level": 4,
+        "chartered_at": 1784059398,
+        "name": "Almara's Waypost"
+      }
+    ],
+    "npc": true
+  },
+  {
+    "display_name": "Corwin Ashford",
+    "coarse_centroid": {
+      "lat": 47.61,
+      "lng": -122.33
+    },
+    "registered_at": 1782763398,
+    "posts": [
+      {
+        "post_token": "5d8efb306ef0438c0685009654c9f35d",
+        "level": 5,
+        "chartered_at": 1783195398,
+        "name": "Corwin's Waypost"
+      },
+      {
+        "post_token": "ddeaa02498f8a7e07b1cd1fe9389d7ca",
+        "level": 5,
+        "chartered_at": 1783800198,
+        "name": "Corwin's Waypost"
+      }
+    ],
+    "npc": true
+  },
+  {
+    "display_name": "Delphine Marr",
+    "coarse_centroid": {
+      "lat": 30.27,
+      "lng": -97.74
+    },
+    "registered_at": 1783627398,
+    "posts": [
+      {
+        "post_token": "987e46ae3b61679c4f08a0db7480ac0d",
+        "level": 5,
+        "chartered_at": 1784059398,
+        "name": "Delphine's Waypost"
+      },
+      {
+        "post_token": "07e67a1b51018f4a6d1a5a2c198a7a4d",
+        "level": 4,
+        "chartered_at": 1784318598,
+        "name": "Delphine's Waypost"
+      }
+    ],
+    "npc": true
+  },
+  {
+    "display_name": "Ozias Kelt",
+    "coarse_centroid": {
+      "lat": 41.88,
+      "lng": -87.63
+    },
+    "registered_at": 1784059398,
+    "posts": [
+      {
+        "post_token": "a7dd5c8a5394d3f96758dc44a043c0b8",
+        "level": 4,
+        "chartered_at": 1784491398,
+        "name": "Ozias's Waypost"
+      },
+      {
+        "post_token": "dbb8c6bfc418fa198deb08735637736a",
+        "level": 3,
+        "chartered_at": 1784923398,
+        "name": "Ozias's Waypost"
+      }
+    ],
+    "npc": true
+  },
+  {
+    "display_name": "Sable Renwick",
+    "coarse_centroid": {
+      "lat": 33.75,
+      "lng": -84.39
+    },
+    "registered_at": 1783713798,
+    "posts": [
+      {
+        "post_token": "418d6f1a051e748247c81d3f441b19a1",
+        "level": 4,
+        "chartered_at": 1784145798,
+        "name": "Sable's Waypost"
+      }
+    ],
+    "npc": true
+  },
+  {
+    "display_name": "Tamsin Aldous",
+    "coarse_centroid": {
+      "lat": 25.76,
+      "lng": -80.19
+    },
+    "registered_at": 1784750598,
+    "posts": [
+      {
+        "post_token": "db35b2d940fbd621d91f5ad4b8f580cf",
+        "level": 4,
+        "chartered_at": 1785182598,
+        "name": "Tamsin's Waypost"
+      }
+    ],
+    "npc": true
+  },
+  {
+    "display_name": "Ione Faircloth",
+    "coarse_centroid": {
+      "lat": 44.98,
+      "lng": -93.27
+    },
+    "registered_at": 1785268998,
+    "posts": [
+      {
+        "post_token": "8ecf3b40c6da04fa179993d3d9a4af0c",
+        "level": 3,
+        "chartered_at": 1785700998,
+        "name": "Ione's Waypost"
+      }
+    ],
+    "npc": true
+  },
+  {
+    "display_name": "Bram Wystan",
+    "coarse_centroid": {
+      "lat": 35.47,
+      "lng": -97.52
+    },
+    "registered_at": 1786132998,
+    "posts": [
+      {
+        "post_token": "e0748656ff5a5895cf16e371ce1abe24",
+        "level": 3,
+        "chartered_at": 1786564998,
+        "name": "Bram's Waypost"
+      }
+    ],
+    "npc": true
+  }
+]

@@ -99,6 +99,13 @@ export interface PlayerProfile {
    * authenticated writes are rejected (see auth middleware). History is kept.
    */
   frozen?: boolean;
+  /**
+   * Seeded NPC "garrison" marker (admin seed-player only; a registered player can
+   * never set it — registration doesn't accept the field). NPCs scaffold the
+   * early leaderboard and retire themselves once real players own the top band —
+   * see retireGarrisonIfClear in logic/leaderboard.ts.
+   */
+  npc?: boolean;
 }
 
 export interface PostSummary {

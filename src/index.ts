@@ -13,7 +13,7 @@ import adminUi from "./routes/admin_ui.js";
 import status from "./routes/status.js";
 import { backfillPlayerIndex, regenPostHp } from "./logic/cron.js";
 import { resolveDueRaids } from "./logic/resolve.js";
-import { rebuildLeaderboardCache } from "./logic/leaderboard.js";
+import { rebuildLeaderboardCache, retireGarrisonIfClear } from "./logic/leaderboard.js";
 import { KvStore, kvAdapter, consolidatedStub } from "./kv/do_store.js";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -64,6 +64,10 @@ export default {
     // Refresh the leaderboard snapshot from truth (backstop for any drift; also
     // keeps a warm snapshot ready between player writes).
     await rebuildLeaderboardCache(e);
+    // Retire the seeded NPC garrison once real players own the top band. No-op
+    // (one index read) once there are no NPCs left, i.e. after it fires or was
+    // never seeded. Rebuilds the snapshot itself when it does purge.
+    await retireGarrisonIfClear(e);
     // Housekeeping: drop expired rows (rate-limit / daily-cap counters). One
     // shared instance now, so a single purge covers every namespace.
     if (env.KV_DO) {

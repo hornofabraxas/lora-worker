@@ -87,6 +87,12 @@ interface SeedPlayerInput {
    * push the label through the bundle route. Same 40-char clamp as that path.
    */
   active_title?: string;
+  /**
+   * Mark this as a garrison NPC. NPCs hold the early leaderboard and retire
+   * themselves once real players claim the top band (see logic/leaderboard.ts).
+   * Only the seed endpoint sets this; registration never accepts it.
+   */
+  npc?: boolean;
 }
 
 // Create or overwrite a player with fully-specified posts + per-post defense.
@@ -126,6 +132,7 @@ core.post("/seed-player", async (c) => {
       : existing?.active_title
         ? { active_title: existing.active_title }
         : {}),
+    ...(body.npc ? { npc: true } : existing?.npc ? { npc: true } : {}),
     post_first_seen: Object.fromEntries(
       postInputs.map((p, i) => [p.post_token, p.first_seen ?? post_summaries[i].chartered_at]),
     ),
