@@ -119,7 +119,7 @@ players in a loop. `routes/register.ts` adds three opt-in caps (all off when uns
 The reference deployment runs (in `wrangler.toml [vars]`):
 
 ```toml
-MAX_TOTAL_PLAYERS = "500"        # hard lifetime ceiling — a leaked invite can't exceed it
+MAX_TOTAL_PLAYERS = "1000"       # hard lifetime ceiling — a leaked invite can't exceed it
 REGISTER_DAILY_LIMIT = "100"     # absorbs a launch-day surge, still caps a leak per day
 REGISTER_IP_DAILY_LIMIT = "3"    # one base camp per home; covers a household, blocks a loop
 ```
