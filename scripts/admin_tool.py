@@ -11,7 +11,7 @@ The secret is read, in order, from:
 
 Commands
 --------
-  list                 Print the current player roster (id, name, #posts).
+  list                 Print the current player roster (id, name).
   wipe                 Delete players. DRY-RUN by default — prints exactly what
                        would be deleted and stops. Pass --apply to actually
                        delete. Use --keep to preserve accounts by id or name.
@@ -68,6 +68,9 @@ def api(base: str, secret: str, method: str, path: str, body: dict | None = None
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("x-admin-secret", secret)
+    # Cloudflare bot protection 403s (error 1010) the default "Python-urllib" UA,
+    # so present a plain, honest one.
+    req.add_header("user-agent", "lora-admin-tool/1.0")
     if data is not None:
         req.add_header("content-type", "application/json")
     try:
@@ -81,7 +84,7 @@ def api(base: str, secret: str, method: str, path: str, body: dict | None = None
 
 
 def fetch_roster(base: str, secret: str) -> list[dict]:
-    """Return [{player_id, display_name, post_count}]. Warns if truncated."""
+    """Return [{player_id, display_name}]. Warns if truncated."""
     res = api(base, secret, "GET", "/api/admin/names?type=player")
     players = res.get("players", [])
     if res.get("truncated"):
@@ -91,12 +94,10 @@ def fetch_roster(base: str, secret: str) -> list[dict]:
             "first wipe, or raise the cap, to be sure you've cleared everyone.",
             file=sys.stderr,
         )
+    # NB: the /names endpoint returns no post rows under type=player, so we don't
+    # try to show a post count here — it would always read 0 and mislead.
     return [
-        {
-            "player_id": p["player_id"],
-            "display_name": p.get("display_name", ""),
-            "post_count": len(p.get("posts", [])),
-        }
+        {"player_id": p["player_id"], "display_name": p.get("display_name", "")}
         for p in players
         if p.get("include_player")
     ]
@@ -110,7 +111,7 @@ def cmd_list(args) -> None:
         return
     print(f"{len(roster)} player(s):\n")
     for p in roster:
-        print(f"  {p['player_id']}  {p['display_name']!r:34}  posts={p['post_count']}")
+        print(f"  {p['player_id']}  {p['display_name']!r:34}")
 
 
 def cmd_wipe(args) -> None:
@@ -137,7 +138,7 @@ def cmd_wipe(args) -> None:
 
     print(f"{'DELETING' if args.apply else 'WOULD DELETE'} {len(to_delete)} player(s):")
     for p in to_delete:
-        print(f"  {p['player_id']}  {p['display_name']!r:34}  posts={p['post_count']}")
+        print(f"  {p['player_id']}  {p['display_name']!r:34}")
 
     if not args.apply:
         print("\nDRY RUN — nothing was deleted. Re-run with --apply to erase these.")
