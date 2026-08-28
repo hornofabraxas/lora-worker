@@ -3,6 +3,7 @@ import app from "../src/index.js";
 import { computeHmac } from "../src/middleware/auth.js";
 import type { Env } from "../src/types.js";
 import { makeEnv } from "./helpers/env.js";
+import { getPlayer } from "../src/kv/queries.js";
 
 
 let env: Env;
@@ -609,5 +610,29 @@ describe("item grant weekly cap", () => {
     ]);
     expect(res.all_items.filter((i: any) => i.id === "c4").length).toBe(1);
     expect(res.all_items.filter((i: any) => i.id.startsWith("c")).length).toBe(4);
+  });
+});
+
+describe("POST /api/bundle — outpost name clamping", () => {
+  beforeEach(() => {
+    env = makeEnv();
+  });
+
+  it("clamps an oversized player-authored post name to 48 chars", async () => {
+    const { player_id, secret } = await registerPlayer("NameClamp");
+    const longName = "X".repeat(500);
+    const body = JSON.stringify({
+      survey_count: 0,
+      discoveries: 0,
+      timestamp: Math.floor(Date.now() / 1000),
+      post_summaries: [{ post_token: "hex_name", level: 2, chartered_at: Math.floor(Date.now() / 1000), name: longName }],
+    });
+    const headers = await makeAuthHeaders(player_id, secret, body);
+    const res = await app.fetch(new Request("http://localhost/api/bundle", { method: "POST", headers, body }), env);
+    expect(res.status).toBe(200);
+
+    const stored = await getPlayer(env, player_id);
+    const post = stored!.post_summaries.find((p) => p.post_token === "hex_name");
+    expect(post?.name?.length).toBe(48);
   });
 });

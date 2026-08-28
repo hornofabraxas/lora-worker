@@ -8,6 +8,7 @@ import {
 } from "../kv/schema.js";
 import { snapshotRead, MutationBuffer } from "../kv/composite.js";
 import { computeDrops } from "../logic/drops.js";
+import { nameIsBlocked } from "../logic/names.js";
 import { reconcileDefenseLevel } from "../kv/queries.js";
 import type { ItemType, ItemRecord, DefenseValues } from "../types.js";
 
@@ -61,6 +62,13 @@ const MAX_POSTS = 6;
 // Ward (dormancy) is capped at 30d in-game (engine.WARD_MAX_DAYS); +1d absorbs
 // clock skew. Stops a client asserting an arbitrarily long raid-immune window.
 const MAX_WARD_SECONDS = 31 * 86400;
+// Outpost names are player-authored free text, shipped to every other player on
+// the leaderboard/scout/raid surfaces. The in-game charter caps them at 30 chars
+// (engine.py); the Worker re-clamps because the client is untrusted — an unbounded
+// name would bloat the leaderboard payload and break layout for every viewer.
+// Content moderation is separate and reactive (operator censor); this is only the
+// length ceiling. 48 leaves headroom over the in-game 30 without being abusable.
+const MAX_POST_NAME_LEN = 48;
 // A centroid drives raid travel-time distance. Legit home location is effectively
 // fixed, so allow it to move at most once/day — a client can't teleport next to a
 // target to collapse the defender's reaction window right before dispatching.
@@ -348,7 +356,14 @@ app.post("/api/bundle", async (c) => {
       const chartered_at = Math.max(p.chartered_at ?? nowSec, seen);
       let dormant_until = p.dormant_until ?? 0;
       if (dormant_until > nowSec + MAX_WARD_SECONDS) dormant_until = nowSec + MAX_WARD_SECONDS;
-      validated.push({ ...p, level, chartered_at, dormant_until });
+      // Clean the player-authored name (untrusted client): blank a denylisted
+      // name so a slur never reaches other players' boards, else clamp length.
+      // The blanked name renders as the "(unnamed)" fallback downstream.
+      const nameClamp =
+        typeof p.name === "string"
+          ? { name: nameIsBlocked(p.name) ? "" : p.name.slice(0, MAX_POST_NAME_LEN) }
+          : {};
+      validated.push({ ...p, ...nameClamp, level, chartered_at, dormant_until });
     }
 
     // Hard post-count ceiling: keep the oldest MAX_POSTS so fabricated extras

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env, RegisterRequest, PlayerProfile } from "../types.js";
 import { getPlayer, putPlayer, addToPlayerIndex } from "../kv/queries.js";
 import { timingSafeEqual } from "../middleware/auth.js";
+import { nameIsBlocked } from "../logic/names.js";
 import { snapshotRead, MutationBuffer } from "../kv/composite.js";
 import { playerKey, PLAYER_INDEX_KEY, registerDailyKey, registerIpDailyKey, NS } from "../kv/schema.js";
 
@@ -40,6 +41,12 @@ app.post("/api/register", async (c) => {
 
   if (!body.display_name || body.display_name.length < 1 || body.display_name.length > 32) {
     return c.json({ ok: false, error: "display_name must be 1-32 characters" }, 400);
+  }
+  // Proactive name filter (logic/names.ts): reject the clearest profanity up front
+  // rather than leaving it for the operator censor ladder. The game client checks
+  // the same list for instant feedback; this is the authoritative gate.
+  if (nameIsBlocked(body.display_name)) {
+    return c.json({ ok: false, error: "That name isn't allowed. Please choose another." }, 400);
   }
 
   // --- Registration caps (all opt-in; unset = off, like REGISTER_SECRET) ------
