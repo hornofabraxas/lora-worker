@@ -84,6 +84,27 @@ const TOMBSTONE_SCAN_LIMIT = 64;
 // A player holds at most MAX_POSTS defense rows; 64 is generous headroom and
 // rides the same snapshot (adding a range costs no extra RPC).
 const DEFENSE_SCAN_LIMIT = 64;
+// mp_tokens are 32 hex chars today; 64 leaves format headroom while stopping a
+// modified client using the token field as unbounded storage.
+const MAX_POST_TOKEN_LEN = 64;
+// grace_days is client-asserted (engine.upkeep_grace_days: base + camp bonus,
+// currently 7 max). 30 is deliberately loose — the clamp exists to stop renown
+// fade being disabled outright (1e9) or poisoned (NaN), not to police balance;
+// dishonest-but-plausible values surface in the admin flags report instead.
+const MAX_GRACE_DAYS = 30;
+
+/** The client is untrusted: any numeric field can arrive as a string, NaN, or
+ *  Infinity, and one poisoned value propagates through the renown math into the
+ *  leaderboard. Returns the value only if it is a finite number. */
+function finiteOr(v: unknown, fallback: number): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
+}
+
+/** Clamp an optional client-asserted number into [lo, hi]; a malformed value
+ *  becomes undefined so the field is omitted and the server default applies. */
+function finiteClamp(v: unknown, lo: number, hi: number): number | undefined {
+  return typeof v === "number" && Number.isFinite(v) ? Math.max(lo, Math.min(v, hi)) : undefined;
+}
 
 const app = new Hono<{ Bindings: Env; Variables: { playerId: string } }>();
 
@@ -333,13 +354,18 @@ app.post("/api/bundle", async (c) => {
 
     const validated: PostSummary[] = [];
     for (const p of body.post_summaries) {
+      // The token is the post's identity everywhere downstream; a non-string or
+      // oversized one is fabrication, not a post — drop it rather than coerce.
+      if (typeof p.post_token !== "string" || p.post_token.length === 0 || p.post_token.length > MAX_POST_TOKEN_LEN) {
+        continue;
+      }
       if (tombstoned.has(p.post_token)) continue;
       let seen = firstSeen[p.post_token];
       if (seen === undefined) {
         seen = priorByHex.get(p.post_token)?.chartered_at ?? nowSec;
         firstSeen[p.post_token] = seen;
       }
-      const level = Math.min(MAX_POST_LEVEL, Math.max(1, Math.floor(p.level ?? 1)));
+      const level = Math.min(MAX_POST_LEVEL, Math.max(1, Math.floor(finiteOr(p.level, 1))));
       // Reconcile this post's defensive HP pool up to its current level, unless a
       // raid knockdown for it is still pending delivery (see above).
       if (!raidPendingTokens.has(p.post_token)) {
@@ -353,17 +379,33 @@ app.post("/api/bundle", async (c) => {
       if (firstLevel[p.post_token] === undefined) {
         firstLevel[p.post_token] = priorByHex.get(p.post_token)?.level ?? level;
       }
-      const chartered_at = Math.max(p.chartered_at ?? nowSec, seen);
-      let dormant_until = p.dormant_until ?? 0;
+      const chartered_at = Math.max(finiteOr(p.chartered_at, nowSec), seen);
+      let dormant_until = Math.max(0, finiteOr(p.dormant_until, 0));
       if (dormant_until > nowSec + MAX_WARD_SECONDS) dormant_until = nowSec + MAX_WARD_SECONDS;
       // Clean the player-authored name (untrusted client): blank a denylisted
       // name so a slur never reaches other players' boards, else clamp length.
       // The blanked name renders as the "(unnamed)" fallback downstream.
-      const nameClamp =
+      const name =
         typeof p.name === "string"
-          ? { name: nameIsBlocked(p.name) ? "" : p.name.slice(0, MAX_POST_NAME_LEN) }
-          : {};
-      validated.push({ ...p, ...nameClamp, level, chartered_at, dormant_until });
+          ? (nameIsBlocked(p.name) ? "" : p.name.slice(0, MAX_POST_NAME_LEN))
+          : undefined;
+      // Ruin inputs feed the renown fade math (logic/ruin.ts); clamp each into
+      // its honest range and drop malformed values so the defaults apply.
+      const last_tended_at = finiteClamp(p.last_tended_at, 0, nowSec + TIMESTAMP_SKEW_SECONDS);
+      const warded_at = finiteClamp(p.warded_at, 0, nowSec + TIMESTAMP_SKEW_SECONDS);
+      const grace_days = finiteClamp(p.grace_days, 1, MAX_GRACE_DAYS);
+      // Built field-by-field, never spread from the request: unknown client keys
+      // must not ride into stored state (profile bloat, at minimum).
+      validated.push({
+        post_token: p.post_token,
+        level,
+        chartered_at,
+        dormant_until,
+        ...(name !== undefined ? { name } : {}),
+        ...(last_tended_at !== undefined ? { last_tended_at } : {}),
+        ...(warded_at !== undefined ? { warded_at } : {}),
+        ...(grace_days !== undefined ? { grace_days } : {}),
+      });
     }
 
     // Hard post-count ceiling: keep the oldest MAX_POSTS so fabricated extras

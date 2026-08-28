@@ -126,6 +126,52 @@ describe("bundle write-time invariants", () => {
     expect(post.dormant_until).toBeLessThan(farFuture);
   });
 
+  it("builds stored posts field-by-field — unknown client keys never persist", async () => {
+    const { player_id, secret } = await registerPlayer();
+    await pushBundle(player_id, secret, {
+      post_summaries: [{
+        post_token: "88aa03fffffffff", level: 1, chartered_at: NOW(),
+        smuggled: "x".repeat(4096), nested: { deep: true },
+      }],
+    });
+    const player = await inspect(player_id);
+    const post = player.post_summaries.find((p: any) => p.post_token === "88aa03fffffffff");
+    expect(post).toBeDefined();
+    expect(post.smuggled).toBeUndefined();
+    expect(post.nested).toBeUndefined();
+  });
+
+  it("clamps ruin inputs and drops malformed ones (NaN can't reach the renown math)", async () => {
+    const { player_id, secret } = await registerPlayer();
+    await pushBundle(player_id, secret, {
+      post_summaries: [{
+        post_token: "88aa04fffffffff", level: 1, chartered_at: NOW(),
+        grace_days: 1e9,                 // fade disabled → clamped to ceiling
+        last_tended_at: "yesterday",     // non-number → dropped, default applies
+        warded_at: NOW() + 86400 * 400,  // far future → clamped to ~now
+      }],
+    });
+    const player = await inspect(player_id);
+    const post = player.post_summaries.find((p: any) => p.post_token === "88aa04fffffffff");
+    expect(post.grace_days).toBe(30);
+    expect(post.last_tended_at).toBeUndefined();
+    expect(post.warded_at).toBeLessThanOrEqual(NOW() + 301);
+  });
+
+  it("drops posts whose token is not a sane string", async () => {
+    const { player_id, secret } = await registerPlayer();
+    await pushBundle(player_id, secret, {
+      post_summaries: [
+        { post_token: "z".repeat(500), level: 1, chartered_at: NOW() },
+        { post_token: 12345, level: 1, chartered_at: NOW() },
+        { post_token: "88aa05fffffffff", level: 1, chartered_at: NOW() },
+      ],
+    });
+    const player = await inspect(player_id);
+    expect(player.post_summaries.length).toBe(1);
+    expect(player.post_summaries[0].post_token).toBe("88aa05fffffffff");
+  });
+
   it("ignores a centroid move within the same day", async () => {
     const { player_id, secret } = await registerPlayer();
     await pushBundle(player_id, secret, { timestamp: NOW(), coarse_centroid: { lat: 10, lng: 10 } });
