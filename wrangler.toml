@@ -51,7 +51,7 @@ MIN_CLIENT_VERSION = "0.0.0"
 #   REGISTER_DAILY_LIMIT    — global new players per UTC day (429 over).
 #   REGISTER_IP_DAILY_LIMIT — new players per CF-Connecting-IP per UTC day (429);
 #                             skipped when the header is absent (local/dev).
-MAX_TOTAL_PLAYERS = "500"
+MAX_TOTAL_PLAYERS = "1000"
 REGISTER_DAILY_LIMIT = "100"
 REGISTER_IP_DAILY_LIMIT = "3"
 
